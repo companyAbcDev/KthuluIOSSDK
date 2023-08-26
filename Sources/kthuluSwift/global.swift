@@ -16,6 +16,10 @@ import web3swift
 import Web3Core
 import SwiftyJSON
 
+public func KthuluSdkVersion(){
+    print("Kthulu SDK version:0.0.7, Connect OK")
+}
+
 //public var addrTransferGoerli = "0x25df7c4d54ce69faf37352cbe98e2d3f9281eaf7"
 //public var addrBridgeGoerli = "0x25df7c4d54ce69faf37352cbe98e2d3f9281eaf7"
 //public var erc20DeployGoerli = "0xc11735Ce3c155E755bC9839A5B5d06dEa0482306"
