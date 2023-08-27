@@ -1158,7 +1158,7 @@ public func deployErc721Async(network: String, from: String, name: String, symbo
         networkSettings(network: network)
         let ownerEA = EthereumAddress(owner)
         let fromEA = EthereumAddress(from)
-        let ca = EthereumAddress(bridgeContractAddress)
+        let ca = EthereumAddress(erc721DeployContractAddress)
         
         var url = try await URL(string:rpcUrl)
         let web3 = try await Web3.new(url!)
@@ -1227,7 +1227,7 @@ public func deployErc1155Async(network: String, from: String, name: String, symb
         networkSettings(network: network)
         let ownerEA = EthereumAddress(owner)
         let fromEA = EthereumAddress(from)
-        let ca = EthereumAddress(bridgeContractAddress)
+        let ca = EthereumAddress(erc1155DeployContractAddress)
         
         var url = try await URL(string:rpcUrl)
         let web3 = try await Web3.new(url!)
