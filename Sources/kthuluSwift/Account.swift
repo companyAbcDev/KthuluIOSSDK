@@ -222,81 +222,99 @@ public func isValidMnemonic(phrase: String) async throws -> Bool {
 public func getBalanceAsync(network: String, owner: String, token_id: String? = "0x0000000000000000000000000000000000000000") async throws  -> JSON {
     var resultArray: JSON = JSON([])
     var resultData: JSON = JSON()
-    resultData = changeJsonObject(useData:["result": "Fail", "value": resultArray])
+    var jsonData: JSON = JSON()
+    var result: JSON = JSON()
+    resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
 
     do{
-        let sqlQuery =
-            " SELECT" +
-                " balance AS balance," +
-                " (SELECT decimals FROM token_table WHERE token_address ='\(token_id)' AND metwork = '\(network)') AS decimals" +
-                " FROM" +
-                    " token_owner_table" +
-                " WHERE" +
-                    " network = '\(network)'" +
-                " AND" +
-                    " owner_account = '\(owner)'" +
-                " AND" +
-                    " token_address = '\(token_id)'"
+        networkSettings(network: network)
+        let url = try await URL(string: rpcUrl)
+        let web3 = try await Web3.new(url!)
+        let userAddress = EthereumAddress(owner)!
         
-        let getBalanceAsync = sqlJsonObject(sqlQuery: sqlQuery)
-        let getBalance = try await parseGetBalanceAsync(json: getBalanceAsync)
-        resultArray.arrayObject?.append(getBalance)
-        resultData = changeJsonObject(useData: ["result": "OK", "value": resultArray])
+        // Check for Ethereum address
+        if token_id == "0x0000000000000000000000000000000000000000" {
+            let ethBalance = try await web3.eth.getBalance(for: EthereumAddress(owner)!)
+            let balanceDecimal = Decimal(string: String(ethBalance)) ?? 0
+            let tenToThePowerofDecimals = Decimal(pow(10, 18))
+            let newBalance = balanceDecimal / tenToThePowerofDecimals
+            jsonData["balance"] = JSON(newBalance)
+            resultArray.arrayObject?.append(jsonData)
+            resultData["result"] = "OK"
+            resultData["value"] = JSON(resultArray)
+        } else {
+            let contract = web3.contract(Web3.Utils.erc20ABI, at: EthereumAddress(token_id!)!, abiVersion: 2)!
+            let parameters: [Any] = [userAddress]
+            let readOp = contract.createReadOperation("balanceOf", parameters: parameters)!
+            readOp.transaction.from = EthereumAddress(owner)
+            
+            let getBalanceResponse = try await readOp.callContractMethod()
+            
+            let tokenBalance = getBalanceResponse["0"] as? BigUInt
+            
+            // Fetch Token Decimals
+            let callResult = try await contract.createReadOperation("decimals")!.callContractMethod()
+            guard let dec = callResult["0"], let decTyped = dec as? BigUInt else {
+                throw Web3Error.inputError(desc: "Contract may not be ERC20 compatible, cannot get decimals")
+            }
+            let decimals = decTyped
+            let balanceInTokens = Double(tokenBalance!) / pow(10.0, Double(decimals))
+            
+            jsonData["balance"] = JSON(balanceInTokens)
+            resultArray.arrayObject?.append(jsonData)
+            resultData["result"] = "OK"
+            resultData["value"] = JSON(resultArray)
+        }
     }
     return resultData
     
-}
-
-// Balance, decimal parse -> Calculate balance
-public func parseGetBalanceAsync(json: JSON) async throws -> JSON {
-    var balanceJson: JSON = JSON()
-    
-    do{
-        if let balance = json["balance"].string {
-            if let decimals = json["decimals"].int {
-                let doubleDecimals = Double(decimals)
-                let balanceDecimal = Decimal(string: balance) ?? 0
-                let tenToThePowerOfDecimals = Decimal(pow(10, doubleDecimals))
-                let newBalance = balanceDecimal / tenToThePowerOfDecimals
-                balanceJson["balance"] = JSON(newBalance)
-            } else {
-                let balanceDecimal = Decimal(string: balance) ?? 0
-                let tenToThePowerofDecimals = Decimal(pow(10, 18))
-                let newBalance = balanceDecimal / tenToThePowerofDecimals
-                balanceJson["balance"] = JSON(newBalance)
-            }
-        }
-    }
-    return balanceJson
 }
 
 // Get token info async
 public func getTokenInfoAsync(network: String, token_id: String) async throws -> JSON {
-    var resultArray: JSON = JSON([])
-    var resultData: JSON = JSON()
-    resultData = changeJsonObject(useData:["result": "Fail", "value": resultArray])
+    var jsonData: JSON = JSON()
+        var resultArray: JSON = JSON([])
+        var resultData: JSON = JSON()
+
+        networkSettings(network: network)
+        let url = try await URL(string: rpcUrl)
+        let web3 = try await Web3.new(url!)
     
-    do{
-        let sqlQuery =
-            " SELECT" +
-                " network As network," +
-                " token_address As token_id," +
-                " token_name As name," +
-                " token_symbol As symbol," +
-                " decimals As decimals," +
-                " total_supply As total_supply" +
-            " FROM" +
-                " token_table" +
-            " WHERE" +
-                " network = '\(network)'" +
-            " AND" +
-                " token_address = '\(token_id)'"
+        let contract = web3.contract(Web3.Utils.erc20ABI, at: EthereumAddress(token_id)!, abiVersion: 2)!
+
+        // Fetch Token Name
+        let nameResponse = try await contract.createReadOperation("name")!.callContractMethod()
+        guard let name = nameResponse["0"] as? String else {
+            throw Web3Error.inputError(desc: "Contract may not be ERC20 compatible, cannot get name")
+        }
+
+        // Fetch Token Symbol
+        let symbolResponse = try await contract.createReadOperation("symbol")!.callContractMethod()
+        guard let symbol = symbolResponse["0"] as? String else {
+            throw Web3Error.inputError(desc: "Contract may not be ERC20 compatible, cannot get symbol")
+        }
+
+        let callResult = try await contract
+            .createReadOperation("decimals")!
+            .callContractMethod()
         
-        let getTokenInfoAsync = sqlJsonObject(sqlQuery: sqlQuery)
-        resultArray.arrayObject?.append(getTokenInfoAsync)
-        resultData = changeJsonObject(useData: ["result": "OK", "value": resultArray])
-    }
-    return resultData
+        var decimals = BigUInt(0)
+        guard let dec = callResult["0"], let decTyped = dec as? BigUInt else {
+            throw Web3Error.inputError(desc: "Contract may not be ERC20 compatible, cannot get decimals")
+        }
+        decimals = decTyped
+        
+        let intDecimals = Int(decimals)
+    
+
+        jsonData["name"] = JSON(name)
+        jsonData["symbol"] = JSON(symbol)
+        jsonData["decimals"] = JSON(intDecimals)
+        resultArray.arrayObject?.append(jsonData)
+        resultData["result"] = "OK"
+        resultData["value"] = JSON(resultArray)
+    
+        return resultData
 }
 
 // Get token info list async
@@ -514,4 +532,81 @@ public func getUsersAsync(owner: String) async throws -> JSON {
     }
 
     return resultData
+}
+
+public func signMessage(
+    fromAddress: String,
+    collection_id: String,
+    network: String,
+    token_id: String,
+    prefix: String) async throws -> String {
+    
+    let accountInfo = try await getAccountInfo(account: fromAddress)
+    var privateKey = ""
+    if(accountInfo["value"] != []){
+        let value = accountInfo["value"]
+        if value[0]["private"].string != nil {
+            privateKey = value[0]["private"].string!
+        }
+    }
+    
+    networkSettings(network: network)
+    var url = try await URL(string:rpcUrl)
+    let web3 = try await Web3.new(url!)
+    
+    let formattedKey = privateKey.trimmingCharacters(in: .whitespacesAndNewlines)
+    let dataKey = Data.fromHex(formattedKey)!
+    let keystore = try await EthereumKeystoreV3(privateKey: dataKey, password: "")
+    let keystoreManager = KeystoreManager([keystore!])
+    web3.addKeystoreManager(keystoreManager)
+    
+    let message = prefix+network+fromAddress+collection_id+token_id
+    
+    let expectedAddress = keystoreManager.addresses![0]
+    
+    let signature = try await web3.personal.signPersonalMessage(message: message.data(using: .utf8)!, from: expectedAddress, password: "")
+    
+    return signature.toHexString()
+    
+}
+
+public func getSignerAddressFromSignature(
+    signature:String,
+    fromAddress: String,
+    collection_id: String,
+    network: String,
+    token_id: String,
+    prefix: String) async throws -> String {
+    
+    let accountInfo = try await getAccountInfo(account: fromAddress)
+    var privateKey = ""
+    if(accountInfo["value"] != []){
+        let value = accountInfo["value"]
+        if value[0]["private"].string != nil {
+            privateKey = value[0]["private"].string!
+        }
+    }
+    
+    networkSettings(network: network)
+    var url = try await URL(string:rpcUrl)
+    let web3 = try await Web3.new(url!)
+    
+    let formattedKey = privateKey.trimmingCharacters(in: .whitespacesAndNewlines)
+    let dataKey = Data.fromHex(formattedKey)!
+    let keystore = try await EthereumKeystoreV3(privateKey: dataKey, password: "")
+    let keystoreManager = KeystoreManager([keystore!])
+    web3.addKeystoreManager(keystoreManager)
+    
+    let message = prefix+network+fromAddress+collection_id+token_id
+
+    let expectedAddress = keystoreManager.addresses![0]
+
+    let newSignature = try await web3.personal.signPersonalMessage(message: message.data(using: .utf8)!, from: expectedAddress, password: "")
+    if(signature == newSignature.toHexString()) {
+        let signer = web3.personal.recoverAddress(message: message.data(using: .utf8)!, signature: newSignature)
+        return signer!.address
+    } else {
+        return "서명이 일치하지 않습니다."
+    }
+        
 }
