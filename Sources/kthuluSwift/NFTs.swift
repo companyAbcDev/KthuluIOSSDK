@@ -35,7 +35,7 @@ public func getMintableAddress(
             "slug, " +
             "category, " +
             "logo_url, " +
-            "image_s3_url, " +
+            "s3_image_url, " +
             "isverified, " +
             "numOwners, " +
             "currency, " +
@@ -73,7 +73,7 @@ public func getMintableAddress(
                 let slug = subJson["slug"].string
                 let category = subJson["category"].string
                 let logo_url = subJson["logo_url"].string
-                let image_s3_url = subJson["image_s3_url"].string
+                let s3_image_url = subJson["s3_image_url"].string
                 let isverified = subJson["isverified"].string
                 let numOwners = subJson["numOwners"].int ?? 0
                 let currency = subJson["currency"].string
@@ -99,7 +99,7 @@ public func getMintableAddress(
                     "slug": slug,
                     "category": category,
                     "logo_url": logo_url,
-                    "image_s3_url": image_s3_url,
+                    "s3_image_url": s3_image_url,
                     "isverified": isverified,
                     "numOwners": numOwners,
                     "currency": currency,
@@ -344,10 +344,8 @@ public func getNFTsByWallet(network: [String],
             " owner.balance AS balance," +
             " token.token_uri AS token_uri," +
             " token.nft_name AS nft_name," +
-            " token.description AS description," +
             " token.image_url AS image_url," +
             " token.external_url AS external_url," +
-            " token.attribute AS attribute," +
             " token.token_info AS token_info" +
         " FROM" +
             " nft_owner_table AS owner" +
@@ -443,12 +441,18 @@ public func getNFTsByWallet(network: [String],
             let token_balance = subJson["balance"].string
             let token_uri = subJson["token_uri"].string
             let name = subJson["nft_name"].string
-            let description = subJson["description"].string
             let image = subJson["image_url"].string
             let external_url = subJson["external_url"].string
-            let attributes = subJson["attribute"].string
             let metadata = subJson["token_info"].string
-            
+            var description: String? = nil
+            var attributes: JSON? = nil
+            if let metadata = metadata {
+                let metadataJSON = JSON(parseJSON: metadata)
+                description = metadataJSON["description"].string
+                if metadataJSON["attributes"].array != nil {
+                    attributes = metadataJSON["attributes"]
+                }
+            }
 
             let objRes: [String: Any] = [
                 "network": network,
@@ -542,10 +546,8 @@ public func getNFTsByWalletArray(network: [String],
             " owner.balance AS balance," +
             " token.token_uri AS token_uri," +
             " token.nft_name AS nft_name," +
-            " token.description AS description," +
             " token.image_url AS image_url," +
             " token.external_url AS external_url," +
-            " token.attribute AS attribute," +
             " token.token_info AS token_info" +
         " FROM" +
             " nft_owner_table AS owner" +
@@ -642,11 +644,18 @@ public func getNFTsByWalletArray(network: [String],
             let token_balance = subJson["balance"].string
             let token_uri = subJson["token_uri"].string
             let name = subJson["nft_name"].string
-            let description = subJson["description"].string
             let image = subJson["image_url"].string
             let external_url = subJson["external_url"].string
-            let attributes = subJson["attribute"].string
             let metadata = subJson["token_info"].string
+            var description: String? = nil
+            var attributes: JSON? = nil
+            if let metadata = metadata {
+                let metadataJSON = JSON(parseJSON: metadata)
+                description = metadataJSON["description"].string
+                if metadataJSON["attributes"].array != nil {
+                    attributes = metadataJSON["attributes"]
+                }
+            }
             
 
             let objRes: [String: Any] = [
@@ -725,61 +734,46 @@ public func getNFTsTransferHistory(network: String,
     
     var transferQuery =
         " SELECT" +
-            " transfer.network AS network," +
-            " sales.buyer_account AS buyer_account," +
-            " transfer.`from` AS from_address," +
-            " transfer.`to` AS to_address," +
-            " transfer.collection_id AS collection_id," +
-            " transfer.block_number AS block_number," +
-            " transfer.`timestamp` AS timestamp," +
-            " transfer.transaction_hash AS transaction_hash," +
-            " transfer.log_id AS log_id," +
-            " transfer.token_id AS token_id," +
-            " transfer.amount AS amount," +
-            " sales.currency AS currency," +
-            " sales.currency_symbol AS currency_symbol," +
-            " sales.decimals AS decimals," +
-            " sales.price AS price," +
-            " sales.market AS market," +
-            " sales.sales_info AS sales_info," +
-        " CASE " +
-            " WHEN " +
-                " sales.sales_info IS NOT NULL THEN 'sales'" +
-            " ELSE " +
-                " 'transfer'" +
-        " END AS " +
-            " transaction_type" +
+            " transaction.network AS network," +
+            " transaction.`from` AS from_address," +
+            " transaction.`to` AS to_address," +
+            " transaction.collection_id AS collection_id," +
+            " transaction.block_number AS block_number," +
+            " transaction.`timestamp` AS timestamp," +
+            " transaction.transaction_hash AS transaction_hash," +
+            " transaction.log_id AS log_id," +
+            " transaction.token_id AS token_id," +
+            " transaction.amount AS amount," +
+            " transaction.currency AS currency," +
+            " transaction.currency_symbol AS currency_symbol," +
+            " transaction.decimals AS decimals," +
+            " transaction.price AS price," +
+            " transaction.market AS market," +
+            " transaction.sales_info AS sales_info," +
+            " transaction.transaction_type AS type" +
         " FROM " +
-            " nft_transfer_table AS transfer" +
-        " LEFT OUTER JOIN" +
-            " nft_sales_table AS sales" +
-        " ON " +
-            " transfer.transaction_hash = sales.transaction_hash" +
-        " LEFT JOIN" +
-            " nft_transaction_type_table AS type" +
-        " ON" +
-            " transfer.transaction_hash = type.transaction_hash" +
+            " nft_transaction_table AS transaction" +
         " WHERE " +
-            " transfer.network = '\(network)'"
+            " transaction.network = '\(network)'"
         if let token_id = token_id {
-            transferQuery += " AND transfer.token_id = '\(token_id)' "
+            transferQuery += " AND transaction.token_id = '\(token_id)' "
         }
         if let collection_id = collection_id {
-            transferQuery += " AND transfer.collection_id = '\(collection_id)' "
+            transferQuery += " AND transaction.collection_id = '\(collection_id)' "
         }
         if type == "transfer" {
-            transferQuery += " AND type.transaction_type = 'transfer' ORDER BY transfer.block_number"
+            transferQuery += " AND transaction.transaction_type = 'transfer' ORDER BY transaction.block_number"
         } else if type == "sales" {
-            transferQuery += " AND type.transaction_type = 'sales' ORDER BY transfer.block_number"
+            transferQuery += " AND transaction.transaction_type = 'sales' ORDER BY transaction.block_number"
         } else {
-            transferQuery += " ORDER BY transfer.block_number"
+            transferQuery += " ORDER BY transaction.block_number"
         }
         if sort == "asc" {
             transferQuery += " ASC"
         } else {
             transferQuery += " DESC"
         }
-        transferQuery += ", CAST(transfer.token_id AS SIGNED) DESC"
+        transferQuery += ", CAST(transaction.token_id AS SIGNED) DESC"
         if let limit = limit {
             let offset = offset ?? 0
             transferQuery += " LIMIT \(limit) OFFSET \(offset)"
@@ -789,25 +783,17 @@ public func getNFTsTransferHistory(network: String,
         "SELECT" +
             " count(*) AS sum" +
         " FROM" +
-            " nft_transfer_table AS transfer" +
-        " LEFT JOIN" +
-            " nft_sales_table AS sales" +
-        " ON" +
-            " transfer.transaction_hash = sales.transaction_hash" +
-        " LEFT JOIN" +
-            " nft_transaction_type_table AS type" +
-        " ON" +
-            " transfer.transaction_hash = type.transaction_hash" +
+            " nft_transaction_table AS transaction" +
         " WHERE" +
-            " transfer.network = '\(network)'"
+            " transaction.network = '\(network)'"
         if let tokenIdValue = token_id {
-            sumQuery += " AND transfer.token_id = '\(tokenIdValue)' "
+            sumQuery += " AND transaction.token_id = '\(tokenIdValue)' "
         }
         if let collectionIdValue = collection_id {
-            sumQuery += " AND transfer.collection_id = '\(collectionIdValue)' "
+            sumQuery += " AND transaction.collection_id = '\(collectionIdValue)' "
         }
         if let typeValue = type {
-            sumQuery += " AND type.transaction_type = '\(typeValue)'"
+            sumQuery += " AND transaction.transaction_type = '\(typeValue)'"
         }
 
     let sumResult = sqlJsonArray(sqlQuery: sumQuery)
@@ -822,7 +808,6 @@ public func getNFTsTransferHistory(network: String,
         
         for (_, subJson): (String, JSON) in transferResult {
             let network = subJson["network"].string
-            let buyer_account = subJson["buyer_account"].string
             let from_address = subJson["from_address"].string
             let to_address = subJson["to_address"].string
             let collection_id = subJson["collection_id"].string
@@ -838,11 +823,10 @@ public func getNFTsTransferHistory(network: String,
             let price = subJson["price"].string
             let market = subJson["market"].string
             let sales_info = subJson["sales_info"].string
-            let transaction_type = subJson["transaction_type"].string
+            let transaction_type = subJson["type"].string
             
             let objRes: [String: Any] = [
                 "network": network,
-                "buyer": buyer_account,
                 "from": from_address,
                 "to": to_address,
                 "collection_id": collection_id,
@@ -858,7 +842,7 @@ public func getNFTsTransferHistory(network: String,
                 "price": price,
                 "market": market,
                 "sales_info": sales_info,
-                "transaction_type": transaction_type
+                "type": transaction_type
             ]
             transferData.append(objRes)
         }
@@ -894,10 +878,10 @@ public func getNFTsTransferHistory(network: String,
     }
 }
 
-public func sendNFT721TransactionAsync(network: String, fromAddress: String, toAddress: String, tokenId: String, nftContractAddress: String) async throws -> JSON {
+public func sendNFT721TransactionAsync(network: String, from: String, to: String, token_id: String, collection_id: String) async throws -> JSON {
     var result: JSON = JSON()
     do {
-        let getAddressInfo = try await getAccountInfo(account: fromAddress)
+        let getAddressInfo = try await getAccountInfo(account: from)
         var privateKey = ""
         if(getAddressInfo["value"] != []){
             let value = getAddressInfo["value"]
@@ -905,9 +889,9 @@ public func sendNFT721TransactionAsync(network: String, fromAddress: String, toA
                 privateKey = value[0]["private"].string!
             }
         }
-        let from = EthereumAddress(fromAddress)
-        let to = EthereumAddress(toAddress)
-        let ca = EthereumAddress(nftContractAddress)!
+        let fromEA = EthereumAddress(from)
+        let toEA = EthereumAddress(to)
+        let ca = EthereumAddress(collection_id)!
 
         networkSettings(network: network)
         var url = try await URL(string:rpcUrl)
@@ -917,9 +901,9 @@ public func sendNFT721TransactionAsync(network: String, fromAddress: String, toA
 //        let chainID = try getChainID(network: network)
 //        let web3 = try await Web3.new(rpcUrl)
         
-        let nonce = try await web3.eth.getTransactionCount(for: from!, onBlock: .pending)
+        let nonce = try await web3.eth.getTransactionCount(for: fromEA!, onBlock: .pending)
         let gasPrice = try await getEstimateGasAsync(network: network, txType: "baseFee")
-        let gasLimit = try await getEstimateGasAsync(network: network, txType: "transferERC721", tokenAddress: nftContractAddress, fromAddress: fromAddress, toAddress: toAddress, tokenId: tokenId)
+        let gasLimit = try await getEstimateGasAsync(network: network, txType: "transferERC721", tokenAddress: collection_id, fromAddress: from, toAddress: to, tokenId: token_id)
         let data = "0x".data(using: .utf8)!
         let contract = web3.contract(Web3.Utils.erc721ABI, at: ca, abiVersion: 2)!
         var transaction: CodableTransaction? = nil
@@ -929,8 +913,8 @@ public func sendNFT721TransactionAsync(network: String, fromAddress: String, toA
             // tip 0.1gwei
             transaction = CodableTransaction(type:.eip1559, to:ca, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: 35000000000)
         }
-        transaction?.from = from
-        let contractData = contract.contract.method("safeTransferFrom", parameters: [from, to, BigUInt(tokenId)], extraData: Data())
+        transaction?.from = fromEA
+        let contractData = contract.contract.method("safeTransferFrom", parameters: [fromEA, toEA, BigUInt(token_id)], extraData: Data())
         transaction?.data = contractData!
 
         let formattedKey = privateKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -963,10 +947,10 @@ public func sendNFT721TransactionAsync(network: String, fromAddress: String, toA
     }
 }
 
-public func sendNFT1155TransactionAsync(network: String, fromAddress: String, toAddress: String, tokenId: String, nftContractAddress: String, amount: String) async throws -> JSON {
+public func sendNFT1155TransactionAsync(network: String, from: String, to: String, token_id: String, collection_id: String, amount: String) async throws -> JSON {
     var result: JSON = JSON()
     do {
-        let getAddressInfo = try await getAccountInfo(account: fromAddress)
+        let getAddressInfo = try await getAccountInfo(account: from)
         var privateKey = ""
         if(getAddressInfo["value"] != []){
             let value = getAddressInfo["value"]
@@ -974,9 +958,9 @@ public func sendNFT1155TransactionAsync(network: String, fromAddress: String, to
                 privateKey = value[0]["private"].string!
             }
         }
-        let from = EthereumAddress(fromAddress)
-        let to = EthereumAddress(toAddress)
-        let ca = EthereumAddress(nftContractAddress)!
+        let fromEA = EthereumAddress(from)
+        let toEA = EthereumAddress(to)
+        let ca = EthereumAddress(collection_id)!
 
         networkSettings(network: network)
         var url = try await URL(string:rpcUrl)
@@ -986,9 +970,9 @@ public func sendNFT1155TransactionAsync(network: String, fromAddress: String, to
 //        let chainID = try getChainID(network: network)
 //        let web3 = try await Web3.new(rpcUrl)
         
-        let nonce = try await web3.eth.getTransactionCount(for: from!, onBlock: .pending)
+        let nonce = try await web3.eth.getTransactionCount(for: fromEA!, onBlock: .pending)
         let gasPrice = try await getEstimateGasAsync(network: network, txType: "baseFee")
-        let gasLimit = try await getEstimateGasAsync(network: network, txType: "transferERC1155", tokenAddress: nftContractAddress, fromAddress: fromAddress, toAddress: toAddress, tokenAmount: amount, tokenId: tokenId)
+        let gasLimit = try await getEstimateGasAsync(network: network, txType: "transferERC1155", tokenAddress: collection_id, fromAddress: from, toAddress: to, tokenAmount: amount, tokenId: token_id)
         let data = "0x".data(using: .utf8)!
         let contract = web3.contract(Web3.Utils.erc1155ABI, at: ca, abiVersion: 2)!
         var transaction: CodableTransaction? = nil
@@ -997,8 +981,8 @@ public func sendNFT1155TransactionAsync(network: String, fromAddress: String, to
         } else {
             transaction = CodableTransaction(type:.eip1559, to:ca, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: 35000000000)
         }
-        transaction?.from = from
-        let contractData = contract.contract.method("safeTransferFrom", parameters: [from, to, BigUInt(tokenId), BigUInt(amount), [UInt8(0)]], extraData: Data())
+        transaction?.from = fromEA
+        let contractData = contract.contract.method("safeTransferFrom", parameters: [fromEA, toEA, BigUInt(token_id), BigUInt(amount), [UInt8(0)]], extraData: Data())
         transaction?.data = contractData!
 
         let formattedKey = privateKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1030,10 +1014,10 @@ public func sendNFT1155TransactionAsync(network: String, fromAddress: String, to
         return result
     }
 }
-public func sendErc721BatchAsync(network: String, fromAddress: String, toAddress: String, tokenId: [String], nftContractAddress: String) async throws -> JSON {
+public func sendErc721BatchAsync(network: String, from: String, to: String, token_id: [String], collection_id: String) async throws -> JSON {
     var result: JSON = JSON()
     do{
-        let accountInfo = try await getAccountInfo(account: fromAddress)
+        let accountInfo = try await getAccountInfo(account: from)
         var privateKey = ""
         if(accountInfo["value"] != []){
             let value = accountInfo["value"]
@@ -1041,16 +1025,16 @@ public func sendErc721BatchAsync(network: String, fromAddress: String, toAddress
                 privateKey = value[0]["private"].string!
             }
         }
-        let from = EthereumAddress(fromAddress)
-        let to = EthereumAddress(toAddress)
-        let ca = EthereumAddress(nftContractAddress)!
+        let fromEA = EthereumAddress(from)
+        let toEA = EthereumAddress(to)
+        let ca = EthereumAddress(collection_id)!
 
         networkSettings(network: network)
         var url = try await URL(string:rpcUrl)
         let web3 = try await Web3.new(url!)
-        let nonce = try await web3.eth.getTransactionCount(for: from!, onBlock: .pending)
+        let nonce = try await web3.eth.getTransactionCount(for: fromEA!, onBlock: .pending)
         let gasPrice = try await getEstimateGasAsync(network: network, txType: "baseFee")
-        let gasLimit = try await getEstimateGasAsync(network: network, txType: "batchTransferERC721", tokenAddress: nftContractAddress, fromAddress: fromAddress, toAddress: toAddress, batchTokenId: tokenId)
+        let gasLimit = try await getEstimateGasAsync(network: network, txType: "batchTransferERC721", tokenAddress: collection_id, fromAddress: from, toAddress: to, batchTokenId: token_id)
         let data = "0x".data(using: .utf8)!
         let contract = web3.contract(kthuluErc721, at: ca, abiVersion: 2)!
         var transaction: CodableTransaction? = nil
@@ -1059,8 +1043,8 @@ public func sendErc721BatchAsync(network: String, fromAddress: String, toAddress
         } else {
             transaction = CodableTransaction(type:.eip1559, to:ca, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: 35000000000)
         }
-        transaction?.from = from
-        let contractData = contract.contract.method("safeBatchTransferFrom", parameters: [from, to, tokenId.compactMap{BigUInt($0)}], extraData: Data())
+        transaction?.from = fromEA
+        let contractData = contract.contract.method("safeBatchTransferFrom", parameters: [fromEA, toEA, token_id.compactMap{BigUInt($0)}], extraData: Data())
         transaction?.data = contractData!
 
         let formattedKey = privateKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1092,10 +1076,10 @@ public func sendErc721BatchAsync(network: String, fromAddress: String, toAddress
         return result
     }
 }
-public func sendErc1155BatchAsync(network: String, fromAddress: String, toAddress: String, tokenId: [String], nftContractAddress: String, amount: [String]) async throws -> JSON {
+public func sendErc1155BatchAsync(network: String, from: String, to: String, token_id: [String], collection_id: String, amount: [String]) async throws -> JSON {
     var result: JSON = JSON()
     do {
-        let accountInfo = try await getAccountInfo(account: fromAddress)
+        let accountInfo = try await getAccountInfo(account: from)
         var privateKey = ""
         if(accountInfo["value"] != []){
             let value = accountInfo["value"]
@@ -1103,9 +1087,9 @@ public func sendErc1155BatchAsync(network: String, fromAddress: String, toAddres
                 privateKey = value[0]["private"].string!
             }
         }
-        let from = EthereumAddress(fromAddress)
-        let to = EthereumAddress(toAddress)
-        let ca = EthereumAddress(nftContractAddress)!
+        let fromEA = EthereumAddress(from)
+        let toEA = EthereumAddress(to)
+        let ca = EthereumAddress(collection_id)!
 
         networkSettings(network: network)
         var url = try await URL(string:rpcUrl)
@@ -1115,9 +1099,9 @@ public func sendErc1155BatchAsync(network: String, fromAddress: String, toAddres
 //        let chainID = try getChainID(network: network)
 //        let web3 = try await Web3.new(rpcUrl)
         
-        let nonce = try await web3.eth.getTransactionCount(for: from!, onBlock: .pending)
+        let nonce = try await web3.eth.getTransactionCount(for: fromEA!, onBlock: .pending)
         let gasPrice = try await getEstimateGasAsync(network: network, txType: "baseFee")
-        let gasLimit = try await getEstimateGasAsync(network: network, txType: "batchTransferERC1155", tokenAddress: nftContractAddress, fromAddress: fromAddress, toAddress: toAddress, batchTokenId: tokenId, batchTokenAmount: amount)
+        let gasLimit = try await getEstimateGasAsync(network: network, txType: "batchTransferERC1155", tokenAddress: collection_id, fromAddress: from, toAddress: to, batchTokenId: token_id, batchTokenAmount: amount)
         let data = "0x".data(using: .utf8)!
         let contract = web3.contract(kthuluErc1155, at: ca, abiVersion: 2)!
         var transaction: CodableTransaction? = nil
@@ -1126,8 +1110,8 @@ public func sendErc1155BatchAsync(network: String, fromAddress: String, toAddres
         } else {
             transaction = CodableTransaction(type:.eip1559, to:ca, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: 35000000000)
         }
-        transaction?.from = from
-        let contractData = contract.contract.method("safeBatchTransferFrom", parameters: [from, to, tokenId.compactMap{BigUInt($0)}, amount.compactMap{BigUInt($0)}, [UInt8(0)]], extraData: Data())
+        transaction?.from = fromEA
+        let contractData = contract.contract.method("safeBatchTransferFrom", parameters: [fromEA, toEA, token_id.compactMap{BigUInt($0)}, amount.compactMap{BigUInt($0)}, [UInt8(0)]], extraData: Data())
         transaction?.data = contractData!
 
         let formattedKey = privateKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1160,10 +1144,10 @@ public func sendErc1155BatchAsync(network: String, fromAddress: String, toAddres
     }
 }
 
-public func deployErc721Async(network: String, fromAddress: String, name: String, symbol: String, baseURI: String, uriType: String, owner: String) async throws -> JSON {
+public func deployErc721Async(network: String, from: String, name: String, symbol: String, token_base_uri: String, uri_type: String, owner: String) async throws -> JSON {
     var result: JSON = JSON()
     do {
-        let accountInfo = try await getAccountInfo(account: fromAddress)
+        let accountInfo = try await getAccountInfo(account: from)
         var privateKey = ""
         if(accountInfo["value"] != []){
             let value = accountInfo["value"]
@@ -1173,8 +1157,8 @@ public func deployErc721Async(network: String, fromAddress: String, name: String
         }
         networkSettings(network: network)
         let ownerEA = EthereumAddress(owner)
-        let from = EthereumAddress(fromAddress)
-        let ca = EthereumAddress(erc721DeployContractAddress)
+        let fromEA = EthereumAddress(from)
+        let ca = EthereumAddress(bridgeContractAddress)
         
         var url = try await URL(string:rpcUrl)
         let web3 = try await Web3.new(url!)
@@ -1183,9 +1167,9 @@ public func deployErc721Async(network: String, fromAddress: String, name: String
 //        let chainID = try getChainID(network: network)
 //        let web3 = try await Web3.new(rpcUrl)
         
-        let nonce = try await web3.eth.getTransactionCount(for: from!, onBlock: .pending)
+        let nonce = try await web3.eth.getTransactionCount(for: fromEA!, onBlock: .pending)
         let gasPrice = try await getEstimateGasAsync(network: network, txType: "baseFee")
-        let gasLimit = try await getEstimateGasAsync(network: network, txType: "deployERC721", fromAddress: fromAddress, name: name, symbol: symbol, baseURI: baseURI, owner: owner, uriType:  uriType)
+        let gasLimit = try await getEstimateGasAsync(network: network, txType: "deployERC721", fromAddress: from, name: name, symbol: symbol, baseURI: token_base_uri, owner: owner, uriType:  uri_type)
         let data = "0x".data(using: .utf8)!
         let contract = web3.contract(deployERC721, at: ca, abiVersion: 2)!
         var transaction: CodableTransaction? = nil
@@ -1195,8 +1179,8 @@ public func deployErc721Async(network: String, fromAddress: String, name: String
             // tip 1gwei
             transaction = CodableTransaction(type:.eip1559, to:ca!, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: 35000000000)
         }
-        transaction?.from = from
-        let contractData = contract.contract.method("deployedERC721", parameters: [name,symbol,baseURI,UInt8(uriType),ownerEA], extraData: Data())
+        transaction?.from = fromEA
+        let contractData = contract.contract.method("deployedERC721", parameters: [name,symbol,token_base_uri,UInt8(uri_type),ownerEA], extraData: Data())
         transaction?.data = contractData!
 
         let formattedKey = privateKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1229,10 +1213,10 @@ public func deployErc721Async(network: String, fromAddress: String, name: String
     }
 }
 
-public func deployErc1155Async(network: String, fromAddress: String, name: String, symbol: String, baseURI: String, owner: String, uriType: String) async throws -> JSON {
+public func deployErc1155Async(network: String, from: String, name: String, symbol: String, token_base_uri: String, owner: String, uri_type: String) async throws -> JSON {
     var result: JSON = JSON()
     do {
-        let accountInfo = try await getAccountInfo(account: fromAddress)
+        let accountInfo = try await getAccountInfo(account: from)
         var privateKey = ""
         if(accountInfo["value"] != []){
             let value = accountInfo["value"]
@@ -1242,8 +1226,8 @@ public func deployErc1155Async(network: String, fromAddress: String, name: Strin
         }
         networkSettings(network: network)
         let ownerEA = EthereumAddress(owner)
-        let from = EthereumAddress(fromAddress)
-        let ca = EthereumAddress(erc1155DeployContractAddress)
+        let fromEA = EthereumAddress(from)
+        let ca = EthereumAddress(bridgeContractAddress)
         
         var url = try await URL(string:rpcUrl)
         let web3 = try await Web3.new(url!)
@@ -1252,9 +1236,9 @@ public func deployErc1155Async(network: String, fromAddress: String, name: Strin
 //        let chainID = try getChainID(network: network)
 //        let web3 = try await Web3.new(rpcUrl)
         
-        let nonce = try await web3.eth.getTransactionCount(for: from!, onBlock: .pending)
+        let nonce = try await web3.eth.getTransactionCount(for: fromEA!, onBlock: .pending)
         let gasPrice = try await getEstimateGasAsync(network: network, txType: "baseFee")
-        let gasLimit = try await getEstimateGasAsync(network: network, txType: "deployERC1155", fromAddress: fromAddress, name: name, symbol: symbol, baseURI: baseURI, owner: owner, uriType:  uriType)
+        let gasLimit = try await getEstimateGasAsync(network: network, txType: "deployERC1155", fromAddress: from, name: name, symbol: symbol, baseURI: token_base_uri, owner: owner, uriType:  uri_type)
         let data = "0x".data(using: .utf8)!
         let contract = web3.contract(deployERC1155, at: ca, abiVersion: 2)!
         var transaction: CodableTransaction? = nil
@@ -1264,8 +1248,8 @@ public func deployErc1155Async(network: String, fromAddress: String, name: Strin
             // tip 1gwei
             transaction = CodableTransaction(type:.eip1559, to:ca!, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: 35000000000)
         }
-        transaction?.from = from
-        let contractData = contract.contract.method("deployedERC1155", parameters: [name,symbol,baseURI,UInt8(uriType),ownerEA], extraData: Data())
+        transaction?.from = fromEA
+        let contractData = contract.contract.method("deployedERC1155", parameters: [name,symbol, token_base_uri,UInt8(uri_type),ownerEA], extraData: Data())
         transaction?.data = contractData!
 
         let formattedKey = privateKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1298,10 +1282,10 @@ public func deployErc1155Async(network: String, fromAddress: String, name: Strin
     }
 }
 
-public func mintErc721Async(network: String, fromAddress: String, toAddress: String, tokenURI: String, tokenId: String, nftContractAddress: String) async throws -> JSON {
+public func mintErc721Async(network: String, from: String, to: String, token_uri: String, token_id: String, collection_id: String) async throws -> JSON {
     var result: JSON = JSON()
     do {
-        let accountInfo = try await getAccountInfo(account: fromAddress)
+        let accountInfo = try await getAccountInfo(account: from)
         var privateKey = ""
         if(accountInfo["value"] != []){
             let value = accountInfo["value"]
@@ -1310,9 +1294,9 @@ public func mintErc721Async(network: String, fromAddress: String, toAddress: Str
             }
         }
 
-        let from = EthereumAddress(fromAddress)
-        let to = EthereumAddress(toAddress)
-        let ca = EthereumAddress(nftContractAddress)
+        let fromEA = EthereumAddress(from)
+        let toEA = EthereumAddress(to)
+        let ca = EthereumAddress(collection_id)
         
         networkSettings(network: network)
         var url = try await URL(string:rpcUrl)
@@ -1322,9 +1306,9 @@ public func mintErc721Async(network: String, fromAddress: String, toAddress: Str
 //        let chainID = try getChainID(network: network)
 //        let web3 = try await Web3.new(rpcUrl)
         
-        let nonce = try await web3.eth.getTransactionCount(for: from!, onBlock: .pending)
+        let nonce = try await web3.eth.getTransactionCount(for: fromEA!, onBlock: .pending)
         let gasPrice = try await getEstimateGasAsync(network: network, txType: "baseFee")
-        let gasLimit = try await getEstimateGasAsync(network: network, txType: "mintERC721", tokenAddress: nftContractAddress, fromAddress: fromAddress, toAddress: toAddress, tokenId: tokenId, tokenURI: tokenURI)
+        let gasLimit = try await getEstimateGasAsync(network: network, txType: "mintERC721", tokenAddress: collection_id, fromAddress: from, toAddress: to, tokenId: token_id, tokenURI: token_uri)
         let data = "0x".data(using: .utf8)!
         let contract = web3.contract(kthuluErc721, at: ca, abiVersion: 2)!
         var transaction: CodableTransaction? = nil
@@ -1334,8 +1318,8 @@ public func mintErc721Async(network: String, fromAddress: String, toAddress: Str
             // tip 1gwei
             transaction = CodableTransaction(type:.eip1559, to:ca!, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: 35000000000)
         }
-        transaction?.from = from
-        let contractData = contract.contract.method("mint", parameters: [to,BigUInt(tokenId),tokenURI], extraData: Data())
+        transaction?.from = fromEA
+        let contractData = contract.contract.method("mint", parameters: [toEA,BigUInt(token_id),token_uri], extraData: Data())
         transaction?.data = contractData!
 
         let formattedKey = privateKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1368,10 +1352,10 @@ public func mintErc721Async(network: String, fromAddress: String, toAddress: Str
     }
 }
 
-public func mintErc1155Async(network: String, fromAddress: String, toAddress: String, tokenURI: String, tokenId: String, nftContractAddress: String, amount: String) async throws -> JSON {
+public func mintErc1155Async(network: String, from: String, to: String, token_uri: String, token_id: String, collection_id: String, amount: String) async throws -> JSON {
     var result: JSON = JSON()
     do {
-        let accountInfo = try await getAccountInfo(account: fromAddress)
+        let accountInfo = try await getAccountInfo(account: from)
         var privateKey = ""
         if(accountInfo["value"] != []){
             let value = accountInfo["value"]
@@ -1380,9 +1364,9 @@ public func mintErc1155Async(network: String, fromAddress: String, toAddress: St
             }
         }
 
-        let from = EthereumAddress(fromAddress)
-        let to = EthereumAddress(toAddress)
-        let ca = EthereumAddress(nftContractAddress)
+        let fromEA = EthereumAddress(from)
+        let toEA = EthereumAddress(to)
+        let ca = EthereumAddress(collection_id)
         
         networkSettings(network: network)
         var url = try await URL(string:rpcUrl)
@@ -1392,9 +1376,9 @@ public func mintErc1155Async(network: String, fromAddress: String, toAddress: St
 //        let chainID = try getChainID(network: network)
 //        let web3 = try await Web3.new(rpcUrl)
         
-        let nonce = try await web3.eth.getTransactionCount(for: from!, onBlock: .pending)
+        let nonce = try await web3.eth.getTransactionCount(for: fromEA!, onBlock: .pending)
         let gasPrice = try await getEstimateGasAsync(network: network, txType: "baseFee")
-        let gasLimit = try await getEstimateGasAsync(network: network, txType: "mintERC1155", tokenAddress: nftContractAddress, fromAddress: fromAddress, toAddress: toAddress, tokenAmount: amount, tokenId: tokenId, tokenURI: tokenURI)
+        let gasLimit = try await getEstimateGasAsync(network: network, txType: "mintERC1155", tokenAddress: collection_id, fromAddress: from, toAddress: to, tokenAmount: amount, tokenId: token_id, tokenURI: token_uri)
         let data = "0x".data(using: .utf8)!
         let contract = web3.contract(kthuluErc1155, at: ca, abiVersion: 2)!
         var transaction: CodableTransaction? = nil
@@ -1404,8 +1388,8 @@ public func mintErc1155Async(network: String, fromAddress: String, toAddress: St
             // tip 1gwei
             transaction = CodableTransaction(type:.eip1559, to:ca!, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: 35000000000)
         }
-        transaction?.from = from
-        let contractData = contract.contract.method("mint", parameters: [to,BigUInt(tokenId),BigUInt(amount),tokenURI,[UInt8(0)]], extraData: Data())
+        transaction?.from = fromEA
+        let contractData = contract.contract.method("mint", parameters: [toEA,BigUInt(token_id),BigUInt(amount),token_uri,[UInt8(0)]], extraData: Data())
         transaction?.data = contractData!
 
         let formattedKey = privateKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1438,10 +1422,10 @@ public func mintErc1155Async(network: String, fromAddress: String, toAddress: St
     }
 }
 
-public func batchMintErc721Async(network: String, fromAddress: String, toAddress: String, tokenId: [String], tokenURI: [String], nftContractAddress: String) async throws -> JSON {
+public func batchMintErc721Async(network: String, from: String, to: String, token_id: [String], token_uri: [String], collection_id: String) async throws -> JSON {
     var result: JSON = JSON()
     do{
-        let accountInfo = try await getAccountInfo(account: fromAddress)
+        let accountInfo = try await getAccountInfo(account: from)
         var privateKey = ""
         if(accountInfo["value"] != []){
             let value = accountInfo["value"]
@@ -1449,16 +1433,16 @@ public func batchMintErc721Async(network: String, fromAddress: String, toAddress
                 privateKey = value[0]["private"].string!
             }
         }
-        let from = EthereumAddress(fromAddress)
-        let to = EthereumAddress(toAddress)
-        let ca = EthereumAddress(nftContractAddress)!
+        let fromEA = EthereumAddress(from)
+        let toEA = EthereumAddress(to)
+        let ca = EthereumAddress(collection_id)!
 
         networkSettings(network: network)
         var url = try await URL(string:rpcUrl)
         let web3 = try await Web3.new(url!)
-        let nonce = try await web3.eth.getTransactionCount(for: from!, onBlock: .pending)
+        let nonce = try await web3.eth.getTransactionCount(for: fromEA!, onBlock: .pending)
         let gasPrice = try await getEstimateGasAsync(network: network, txType: "baseFee")
-        let gasLimit = try await getEstimateGasAsync(network: network, txType: "batchMintERC721", tokenAddress: nftContractAddress, fromAddress: fromAddress, toAddress: toAddress, batchTokenId: tokenId, batchTokenURI: tokenURI)
+        let gasLimit = try await getEstimateGasAsync(network: network, txType: "batchMintERC721", tokenAddress: collection_id, fromAddress: from, toAddress: to, batchTokenId: token_id, batchTokenURI: token_uri)
         let data = "0x".data(using: .utf8)!
         let contract = web3.contract(kthuluErc721, at: ca, abiVersion: 2)!
         var transaction: CodableTransaction? = nil
@@ -1467,8 +1451,8 @@ public func batchMintErc721Async(network: String, fromAddress: String, toAddress
         } else {
             transaction = CodableTransaction(type:.eip1559, to:ca, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: 35000000000)
         }
-        transaction?.from = from
-        let contractData = contract.contract.method("mintBatch", parameters: [to, tokenId.compactMap{BigUInt($0)}, tokenURI], extraData: Data())
+        transaction?.from = fromEA
+        let contractData = contract.contract.method("mintBatch", parameters: [toEA, token_id.compactMap{BigUInt($0)}, token_uri], extraData: Data())
         transaction?.data = contractData!
 
         let formattedKey = privateKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1501,10 +1485,10 @@ public func batchMintErc721Async(network: String, fromAddress: String, toAddress
     }
 }
 
-public func batchMintErc1155Async(network: String, fromAddress: String, toAddress: String, tokenId: [String], tokenURI: [String], nftContractAddress: String, amount: [String]) async throws -> JSON {
+public func batchMintErc1155Async(network: String, from: String, to: String, token_id: [String], token_uri: [String], collection_id: String, amount: [String]) async throws -> JSON {
     var result: JSON = JSON()
     do{
-        let accountInfo = try await getAccountInfo(account: fromAddress)
+        let accountInfo = try await getAccountInfo(account: from)
         var privateKey = ""
         if(accountInfo["value"] != []){
             let value = accountInfo["value"]
@@ -1512,16 +1496,16 @@ public func batchMintErc1155Async(network: String, fromAddress: String, toAddres
                 privateKey = value[0]["private"].string!
             }
         }
-        let from = EthereumAddress(fromAddress)
-        let to = EthereumAddress(toAddress)
-        let ca = EthereumAddress(nftContractAddress)!
+        let fromEA = EthereumAddress(from)
+        let toEA = EthereumAddress(to)
+        let ca = EthereumAddress(collection_id)!
 
         networkSettings(network: network)
         var url = try await URL(string:rpcUrl)
         let web3 = try await Web3.new(url!)
-        let nonce = try await web3.eth.getTransactionCount(for: from!, onBlock: .pending)
+        let nonce = try await web3.eth.getTransactionCount(for: fromEA!, onBlock: .pending)
         let gasPrice = try await getEstimateGasAsync(network: network, txType: "baseFee")
-        let gasLimit = try await getEstimateGasAsync(network: network, txType: "batchMintERC1155", tokenAddress: nftContractAddress, fromAddress: fromAddress, toAddress: toAddress, batchTokenId: tokenId, batchTokenAmount: amount, batchTokenURI: tokenURI)
+        let gasLimit = try await getEstimateGasAsync(network: network, txType: "batchMintERC1155", tokenAddress: collection_id, fromAddress: from, toAddress: to, batchTokenId: token_id, batchTokenAmount: amount, batchTokenURI: token_uri)
         let data = "0x".data(using: .utf8)!
         let contract = web3.contract(kthuluErc1155, at: ca, abiVersion: 2)!
         var transaction: CodableTransaction? = nil
@@ -1530,8 +1514,8 @@ public func batchMintErc1155Async(network: String, fromAddress: String, toAddres
         } else {
             transaction = CodableTransaction(type:.eip1559, to:ca, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: 35000000000)
         }
-        transaction?.from = from
-        let contractData = contract.contract.method("mintBatch", parameters: [to, tokenId.compactMap{BigUInt($0)}, amount.compactMap{BigUInt($0)}, tokenURI, [UInt8(0)]], extraData: Data())
+        transaction?.from = fromEA
+        let contractData = contract.contract.method("mintBatch", parameters: [toEA, token_id.compactMap{BigUInt($0)}, amount.compactMap{BigUInt($0)}, token_uri, [UInt8(0)]], extraData: Data())
         transaction?.data = contractData!
 
         let formattedKey = privateKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1564,10 +1548,10 @@ public func batchMintErc1155Async(network: String, fromAddress: String, toAddres
     }
 }
 
-public func burnErc721Async(network: String, fromAddress: String, tokenId: String, nftContractAddress: String) async throws -> JSON {
+public func burnErc721Async(network: String, from: String, token_id: String, collection_id: String) async throws -> JSON {
     var result: JSON = JSON()
     do {
-        let accountInfo = try await getAccountInfo(account: fromAddress)
+        let accountInfo = try await getAccountInfo(account: from)
         var privateKey = ""
         if(accountInfo["value"] != []){
             let value = accountInfo["value"]
@@ -1576,16 +1560,16 @@ public func burnErc721Async(network: String, fromAddress: String, tokenId: Strin
             }
         }
 
-        let from = EthereumAddress(fromAddress)
-        let ca = EthereumAddress(nftContractAddress)
+        let fromEA = EthereumAddress(from)
+        let ca = EthereumAddress(collection_id)
         
         networkSettings(network: network)
         var url = try await URL(string:rpcUrl)
         let web3 = try await Web3.new(url!)
         
-        let nonce = try await web3.eth.getTransactionCount(for: from!, onBlock: .pending)
+        let nonce = try await web3.eth.getTransactionCount(for: fromEA!, onBlock: .pending)
         let gasPrice = try await getEstimateGasAsync(network: network, txType: "baseFee")
-        let gasLimit = try await getEstimateGasAsync(network: network, txType: "burnERC721", tokenAddress: nftContractAddress, fromAddress: fromAddress, tokenId: tokenId)
+        let gasLimit = try await getEstimateGasAsync(network: network, txType: "burnERC721", tokenAddress: collection_id, fromAddress: from, tokenId: token_id)
         let data = "0x".data(using: .utf8)!
         let contract = web3.contract(kthuluErc721, at: ca, abiVersion: 2)!
         var transaction: CodableTransaction? = nil
@@ -1595,8 +1579,8 @@ public func burnErc721Async(network: String, fromAddress: String, tokenId: Strin
             // tip 1gwei
             transaction = CodableTransaction(type:.eip1559, to:ca!, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: 35000000000)
         }
-        transaction?.from = from
-        let contractData = contract.contract.method("burn", parameters: [BigUInt(tokenId)], extraData: Data())
+        transaction?.from = fromEA
+        let contractData = contract.contract.method("burn", parameters: [BigUInt(token_id)], extraData: Data())
         transaction?.data = contractData!
 
         let formattedKey = privateKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1629,10 +1613,10 @@ public func burnErc721Async(network: String, fromAddress: String, tokenId: Strin
     }
 }
 
-public func burnErc1155Async(network: String, fromAddress: String, tokenId: String, nftContractAddress: String, amount: String) async throws -> JSON {
+public func burnErc1155Async(network: String, from: String, token_id: String, collection_id: String, amount: String) async throws -> JSON {
     var result: JSON = JSON()
     do {
-        let accountInfo = try await getAccountInfo(account: fromAddress)
+        let accountInfo = try await getAccountInfo(account: from)
         var privateKey = ""
         if(accountInfo["value"] != []){
             let value = accountInfo["value"]
@@ -1641,16 +1625,16 @@ public func burnErc1155Async(network: String, fromAddress: String, tokenId: Stri
             }
         }
 
-        let from = EthereumAddress(fromAddress)
-        let ca = EthereumAddress(nftContractAddress)
+        let fromEA = EthereumAddress(from)
+        let ca = EthereumAddress(collection_id)
         
         networkSettings(network: network)
         var url = try await URL(string:rpcUrl)
         let web3 = try await Web3.new(url!)
         
-        let nonce = try await web3.eth.getTransactionCount(for: from!, onBlock: .pending)
+        let nonce = try await web3.eth.getTransactionCount(for: fromEA!, onBlock: .pending)
         let gasPrice = try await getEstimateGasAsync(network: network, txType: "baseFee")
-        let gasLimit = try await getEstimateGasAsync(network: network, txType: "burnERC1155", tokenAddress: nftContractAddress, fromAddress: fromAddress, tokenAmount: amount, tokenId: tokenId)
+        let gasLimit = try await getEstimateGasAsync(network: network, txType: "burnERC1155", tokenAddress: collection_id, fromAddress: from, tokenAmount: amount, tokenId: token_id)
         let data = "0x".data(using: .utf8)!
         let contract = web3.contract(kthuluErc1155, at: ca, abiVersion: 2)!
         var transaction: CodableTransaction? = nil
@@ -1660,8 +1644,8 @@ public func burnErc1155Async(network: String, fromAddress: String, tokenId: Stri
             // tip 1gwei
             transaction = CodableTransaction(type:.eip1559, to:ca!, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: 35000000000)
         }
-        transaction?.from = from
-        let contractData = contract.contract.method("burn", parameters: [from,BigUInt(tokenId),BigUInt(amount)], extraData: Data())
+        transaction?.from = fromEA
+        let contractData = contract.contract.method("burn", parameters: [fromEA,BigUInt(token_id),BigUInt(amount)], extraData: Data())
         transaction?.data = contractData!
 
         let formattedKey = privateKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1978,3 +1962,78 @@ public func verifyNFT(network: String, tokenId: String, contractAddress: String,
         }
     }
 }
+
+public func chkNFTHolder(network: String, account: String, collection_id: String, token_id: String) async throws -> JSON {
+    var result: JSON = JSON()
+    var query =
+        "SELECT network, collection_id, token_id, nft_type FROM " +
+            "nft_token_table " +
+        "WHERE " +
+        "network = '\(network)' " +
+        "AND " +
+            "collection_id = '\(collection_id)' " +
+        "AND " +
+            "token_id = '\(token_id)' "
+    do {
+        var network: String? = nil
+        var collection_id: String? = nil
+        var token_id: String? = nil
+        var nft_type: String? = nil
+        do {
+            let res = try await sqlJsonObject(sqlQuery: query)
+            network = res["network"].string
+            collection_id = res["collection_id"].string
+            token_id = res["token_id"].string
+            nft_type = res["nft_type"].string
+        } catch {
+            throw error
+        }
+        
+        if(nft_type == nil) {
+            result["result"] = JSON("FAIL")
+            result["error"] = JSON("DB info is null")
+            return result
+        }
+        
+        networkSettings(network: network!)
+        var rpc = try await URL(string:rpcUrl)
+        let web3 = try await Web3.new(rpc!)
+        let ca = EthereumAddress(from: collection_id!)
+        
+        if(nft_type == "erc721") {
+            let contract = web3.contract(abiWrappedERC721, at: ca)!
+            let readOp = contract.createReadOperation("ownerOf",parameters: [BigUInt(token_id!)])!
+            let response = try await readOp.callContractMethod()
+            let owner = response["0"] as! EthereumAddress
+            if(owner.address.lowercased() == account.lowercased()) {
+                result["result"] = JSON("OK")
+                return result
+            } else {
+                result["result"] = JSON("FAIL")
+                return result
+            }
+        } else {
+            let owner = EthereumAddress(from: account)
+            let contract = web3.contract(kthuluErc1155, at: ca)!
+            let readOp = contract.createReadOperation("balanceOf",parameters: [owner,BigUInt(token_id!)])!
+            let response = try await readOp.callContractMethod()
+            print(response)
+            let balanceOf = response["0"] as! BigUInt
+            if(balanceOf >= 1) {
+                result["result"] = JSON("OK")
+                return result
+            } else {
+                result["result"] = JSON("FAIL")
+                return result
+            }
+        }
+        
+    } catch {
+        result["result"] = JSON("FAIL")
+        result["error"] = JSON(error.localizedDescription)
+        return result
+    }
+    
+    
+}
+
