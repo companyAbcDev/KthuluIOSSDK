@@ -586,7 +586,7 @@ public func getNFTsByWalletArray(network: [String],
     if let limitValue = limit {
         strQuery += " LIMIT \(limitValue) OFFSET \(offset)"
     }
-    print(strQuery)
+//    print(strQuery)
     var sumQuery =
             "SELECT" +
                 " count(*) AS sum" +
@@ -618,7 +618,7 @@ public func getNFTsByWalletArray(network: [String],
     }
     sumQuery += " AND NOT EXISTS ( SELECT 1 FROM nft_hide_table AS hide WHERE hide.network = owner.network AND hide.account = owner.owner_account AND hide.token_id = owner.token_id AND hide.collection_id = owner.collection_id)"
     
-    print(sumQuery)
+//    print(sumQuery)
     let nftResult = sqlJsonArray(sqlQuery: strQuery)
     let sumResult = sqlJsonArray(sqlQuery: sumQuery)
     
@@ -879,7 +879,10 @@ public func getNFTsTransferHistory(network: String,
 }
 
 public func sendNFT721TransactionAsync(network: String, from: String, to: String, token_id: String, collection_id: String) async throws -> JSON {
-    var result: JSON = JSON()
+        var resultArray: JSON = JSON([])
+        var resultData: JSON = JSON()
+        var result: JSON = JSON()
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     do {
         let getAddressInfo = try await getAccountInfo(account: from)
         var privateKey = ""
@@ -902,8 +905,22 @@ public func sendNFT721TransactionAsync(network: String, from: String, to: String
 //        let web3 = try await Web3.new(rpcUrl)
         
         let nonce = try await web3.eth.getTransactionCount(for: fromEA!, onBlock: .pending)
-        let gasPrice = try await getEstimateGasAsync(network: network, txType: "baseFee")
-        let gasLimit = try await getEstimateGasAsync(network: network, txType: "transferERC721", tokenAddress: collection_id, fromAddress: from, toAddress: to, tokenId: token_id)
+        let gasLimitEstimate = try await getEstimateGasAsync(network: network, tx_type: "transferERC721", token_address: collection_id, from: from, to: to, token_id: token_id)
+        let gasPriceEstimate = try await getEstimateGasAsync(network: network, tx_type: "baseFee")
+        
+        var gasPrice: BigUInt? = nil
+        var gasLimit: BigUInt? = nil
+        
+        if let valueArray = gasPriceEstimate["value"].arrayObject as? [[String: Any]] {
+            if let gas = valueArray[0]["gas"] as? String {
+                gasPrice = BigUInt(gas)
+            }
+        }
+        if let valueArray = gasLimitEstimate["value"].arrayObject as? [[String: Any]] {
+            if let gas = valueArray[0]["gas"] as? String {
+                gasLimit = BigUInt(gas)
+            }
+        }
         let data = "0x".data(using: .utf8)!
         let contract = web3.contract(Web3.Utils.erc721ABI, at: ca, abiVersion: 2)!
         var transaction: CodableTransaction? = nil
@@ -911,7 +928,7 @@ public func sendNFT721TransactionAsync(network: String, from: String, to: String
             transaction = CodableTransaction(to:ca, nonce:nonce, chainID:chainID, gasLimit: gasLimit!, gasPrice: gasPrice)
         } else {
             // tip 0.1gwei
-            transaction = CodableTransaction(type:.eip1559, to:ca, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: 35000000000)
+            transaction = CodableTransaction(type:.eip1559, to:ca, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
         }
         transaction?.from = fromEA
         let contractData = contract.contract.method("safeTransferFrom", parameters: [fromEA, toEA, BigUInt(token_id)], extraData: Data())
@@ -937,18 +954,29 @@ public func sendNFT721TransactionAsync(network: String, from: String, to: String
         }
 
         let response = try await web3.eth.send(raw: transactionData)
-        result["result"] = JSON("OK")
-        result["transactionHash"] = JSON(response.hash)
-        return result
+        if(response.hash != nil){
+            result["transaction_hash"] = JSON(response.hash)
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "OK", "value": resultArray])
+        } else {
+            result["error"] = JSON("insufficient funds")
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        }
+        return resultData
     } catch let error{
-        result["result"] = JSON("FAIL")
-        result["transactionHash"] = JSON(error.localizedDescription)
-        return result
+        result["error"] = JSON(error.localizedDescription)
+        resultArray.arrayObject?.append(result)
+        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        return resultData
     }
 }
 
 public func sendNFT1155TransactionAsync(network: String, from: String, to: String, token_id: String, collection_id: String, amount: String) async throws -> JSON {
-    var result: JSON = JSON()
+        var resultArray: JSON = JSON([])
+        var resultData: JSON = JSON()
+        var result: JSON = JSON()
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     do {
         let getAddressInfo = try await getAccountInfo(account: from)
         var privateKey = ""
@@ -971,15 +999,29 @@ public func sendNFT1155TransactionAsync(network: String, from: String, to: Strin
 //        let web3 = try await Web3.new(rpcUrl)
         
         let nonce = try await web3.eth.getTransactionCount(for: fromEA!, onBlock: .pending)
-        let gasPrice = try await getEstimateGasAsync(network: network, txType: "baseFee")
-        let gasLimit = try await getEstimateGasAsync(network: network, txType: "transferERC1155", tokenAddress: collection_id, fromAddress: from, toAddress: to, tokenAmount: amount, tokenId: token_id)
+        let gasLimitEstimate = try await getEstimateGasAsync(network: network, tx_type: "transferERC1155", token_address: collection_id, from: from, to: to, amount: amount, token_id: token_id)
+        let gasPriceEstimate = try await getEstimateGasAsync(network: network, tx_type: "baseFee")
+        
+        var gasPrice: BigUInt? = nil
+        var gasLimit: BigUInt? = nil
+        
+        if let valueArray = gasPriceEstimate["value"].arrayObject as? [[String: Any]] {
+            if let gas = valueArray[0]["gas"] as? String {
+                gasPrice = BigUInt(gas)
+            }
+        }
+        if let valueArray = gasLimitEstimate["value"].arrayObject as? [[String: Any]] {
+            if let gas = valueArray[0]["gas"] as? String {
+                gasLimit = BigUInt(gas)
+            }
+        }
         let data = "0x".data(using: .utf8)!
         let contract = web3.contract(Web3.Utils.erc1155ABI, at: ca, abiVersion: 2)!
         var transaction: CodableTransaction? = nil
         if(network == "bnb" || network == "bnbTest") {
             transaction = CodableTransaction(to:ca, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, gasPrice: gasPrice)
         } else {
-            transaction = CodableTransaction(type:.eip1559, to:ca, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: 35000000000)
+            transaction = CodableTransaction(type:.eip1559, to:ca, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
         }
         transaction?.from = fromEA
         let contractData = contract.contract.method("safeTransferFrom", parameters: [fromEA, toEA, BigUInt(token_id), BigUInt(amount), [UInt8(0)]], extraData: Data())
@@ -1005,17 +1047,28 @@ public func sendNFT1155TransactionAsync(network: String, from: String, to: Strin
         }
 
         let response = try await web3.eth.send(raw: transactionData)
-        result["result"] = JSON("OK")
-        result["transactionHash"] = JSON(response.hash)
-        return result
+        if(response.hash != nil){
+            result["transaction_hash"] = JSON(response.hash)
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "OK", "value": resultArray])
+        } else {
+            result["error"] = JSON("insufficient funds")
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        }
+        return resultData
     } catch let error{
-        result["result"] = JSON("FAIL")
-        result["transactionHash"] = JSON(error.localizedDescription)
-        return result
+        result["error"] = JSON(error.localizedDescription)
+        resultArray.arrayObject?.append(result)
+        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        return resultData
     }
 }
 public func sendErc721BatchAsync(network: String, from: String, to: String, token_id: [String], collection_id: String) async throws -> JSON {
-    var result: JSON = JSON()
+        var resultArray: JSON = JSON([])
+        var resultData: JSON = JSON()
+        var result: JSON = JSON()
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     do{
         let accountInfo = try await getAccountInfo(account: from)
         var privateKey = ""
@@ -1033,18 +1086,32 @@ public func sendErc721BatchAsync(network: String, from: String, to: String, toke
         var url = try await URL(string:rpcUrl)
         let web3 = try await Web3.new(url!)
         let nonce = try await web3.eth.getTransactionCount(for: fromEA!, onBlock: .pending)
-        let gasPrice = try await getEstimateGasAsync(network: network, txType: "baseFee")
-        let gasLimit = try await getEstimateGasAsync(network: network, txType: "batchTransferERC721", tokenAddress: collection_id, fromAddress: from, toAddress: to, batchTokenId: token_id)
+        let gasLimitEstimate = try await getEstimateGasAsync(network: network, tx_type: "batchTransferERC721", token_address: collection_id, from: from, to: to, batch_token_id: token_id)
+        let gasPriceEstimate = try await getEstimateGasAsync(network: network, tx_type: "baseFee")
+        
+        var gasPrice: BigUInt? = nil
+        var gasLimit: BigUInt? = nil
+        
+        if let valueArray = gasPriceEstimate["value"].arrayObject as? [[String: Any]] {
+            if let gas = valueArray[0]["gas"] as? String {
+                gasPrice = BigUInt(gas)
+            }
+        }
+        if let valueArray = gasLimitEstimate["value"].arrayObject as? [[String: Any]] {
+            if let gas = valueArray[0]["gas"] as? String {
+                gasLimit = BigUInt(gas)
+            }
+        }
         let data = "0x".data(using: .utf8)!
-        let contract = web3.contract(kthuluErc721, at: ca, abiVersion: 2)!
+        let contract = web3.contract(abiWrappedERC721, at: ca, abiVersion: 2)!
         var transaction: CodableTransaction? = nil
         if(network == "bnb" || network == "bnbTest") {
             transaction = CodableTransaction(to:ca, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, gasPrice: gasPrice)
         } else {
-            transaction = CodableTransaction(type:.eip1559, to:ca, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: 35000000000)
+            transaction = CodableTransaction(type:.eip1559, to:ca, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
         }
         transaction?.from = fromEA
-        let contractData = contract.contract.method("safeBatchTransferFrom", parameters: [fromEA, toEA, token_id.compactMap{BigUInt($0)}], extraData: Data())
+        let contractData = contract.contract.method("transferFromBatch", parameters: [fromEA, toEA, token_id.compactMap{BigUInt($0)}], extraData: Data())
         transaction?.data = contractData!
 
         let formattedKey = privateKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1067,17 +1134,28 @@ public func sendErc721BatchAsync(network: String, from: String, to: String, toke
         }
 
         let response = try await web3.eth.send(raw: transactionData)
-            result["result"] = JSON("OK")
-            result["transactionHash"] = JSON(response.hash)
-            return result
+        if(response.hash != nil){
+            result["transaction_hash"] = JSON(response.hash)
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "OK", "value": resultArray])
+        } else {
+            result["error"] = JSON("insufficient funds")
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        }
+        return resultData
     } catch let error{
-        result["result"] = JSON("FAIL")
-        result["transactionHash"] = JSON(error.localizedDescription)
-        return result
+        result["error"] = JSON(error.localizedDescription)
+        resultArray.arrayObject?.append(result)
+        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        return resultData
     }
 }
 public func sendErc1155BatchAsync(network: String, from: String, to: String, token_id: [String], collection_id: String, amount: [String]) async throws -> JSON {
-    var result: JSON = JSON()
+        var resultArray: JSON = JSON([])
+        var resultData: JSON = JSON()
+        var result: JSON = JSON()
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     do {
         let accountInfo = try await getAccountInfo(account: from)
         var privateKey = ""
@@ -1100,15 +1178,29 @@ public func sendErc1155BatchAsync(network: String, from: String, to: String, tok
 //        let web3 = try await Web3.new(rpcUrl)
         
         let nonce = try await web3.eth.getTransactionCount(for: fromEA!, onBlock: .pending)
-        let gasPrice = try await getEstimateGasAsync(network: network, txType: "baseFee")
-        let gasLimit = try await getEstimateGasAsync(network: network, txType: "batchTransferERC1155", tokenAddress: collection_id, fromAddress: from, toAddress: to, batchTokenId: token_id, batchTokenAmount: amount)
+        let gasLimitEstimate = try await getEstimateGasAsync(network: network, tx_type: "batchTransferERC1155", token_address: collection_id, from: from, to: to, batch_token_id: token_id, batch_token_amount: amount)
+        let gasPriceEstimate = try await getEstimateGasAsync(network: network, tx_type: "baseFee")
+        
+        var gasPrice: BigUInt? = nil
+        var gasLimit: BigUInt? = nil
+        
+        if let valueArray = gasPriceEstimate["value"].arrayObject as? [[String: Any]] {
+            if let gas = valueArray[0]["gas"] as? String {
+                gasPrice = BigUInt(gas)
+            }
+        }
+        if let valueArray = gasLimitEstimate["value"].arrayObject as? [[String: Any]] {
+            if let gas = valueArray[0]["gas"] as? String {
+                gasLimit = BigUInt(gas)
+            }
+        }
         let data = "0x".data(using: .utf8)!
-        let contract = web3.contract(kthuluErc1155, at: ca, abiVersion: 2)!
+        let contract = web3.contract(abiWrappedERC1155, at: ca, abiVersion: 2)!
         var transaction: CodableTransaction? = nil
         if(network == "bnb" || network == "bnbTest") {
             transaction = CodableTransaction(to:ca, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, gasPrice: gasPrice)
         } else {
-            transaction = CodableTransaction(type:.eip1559, to:ca, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: 35000000000)
+            transaction = CodableTransaction(type:.eip1559, to:ca, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
         }
         transaction?.from = fromEA
         let contractData = contract.contract.method("safeBatchTransferFrom", parameters: [fromEA, toEA, token_id.compactMap{BigUInt($0)}, amount.compactMap{BigUInt($0)}, [UInt8(0)]], extraData: Data())
@@ -1134,18 +1226,29 @@ public func sendErc1155BatchAsync(network: String, from: String, to: String, tok
         }
 
         let response = try await web3.eth.send(raw: transactionData)
-            result["result"] = JSON("OK")
-            result["transactionHash"] = JSON(response.hash)
-            return result
+        if(response.hash != nil){
+            result["transaction_hash"] = JSON(response.hash)
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "OK", "value": resultArray])
+        } else {
+            result["error"] = JSON("insufficient funds")
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        }
+        return resultData
     } catch let error{
-        result["result"] = JSON("FAIL")
-        result["transactionHash"] = JSON(error.localizedDescription)
-        return result
+        result["error"] = JSON(error.localizedDescription)
+        resultArray.arrayObject?.append(result)
+        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        return resultData
     }
 }
 
-public func deployErc721Async(network: String, from: String, name: String, symbol: String, token_base_uri: String, uri_type: String, owner: String) async throws -> JSON {
-    var result: JSON = JSON()
+public func deployErc721Async(network: String, from: String, name: String, symbol: String, token_base_uri: String, uri_type: String) async throws -> JSON {
+        var resultArray: JSON = JSON([])
+        var resultData: JSON = JSON()
+        var result: JSON = JSON()
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     do {
         let accountInfo = try await getAccountInfo(account: from)
         var privateKey = ""
@@ -1156,9 +1259,8 @@ public func deployErc721Async(network: String, from: String, name: String, symbo
             }
         }
         networkSettings(network: network)
-        let ownerEA = EthereumAddress(owner)
         let fromEA = EthereumAddress(from)
-        let ca = EthereumAddress(erc721DeployContractAddress)
+        let ca = EthereumAddress(nftTransferContractAddress)
         
         var url = try await URL(string:rpcUrl)
         let web3 = try await Web3.new(url!)
@@ -1168,19 +1270,33 @@ public func deployErc721Async(network: String, from: String, name: String, symbo
 //        let web3 = try await Web3.new(rpcUrl)
         
         let nonce = try await web3.eth.getTransactionCount(for: fromEA!, onBlock: .pending)
-        let gasPrice = try await getEstimateGasAsync(network: network, txType: "baseFee")
-        let gasLimit = try await getEstimateGasAsync(network: network, txType: "deployERC721", fromAddress: from, name: name, symbol: symbol, baseURI: token_base_uri, owner: owner, uriType:  uri_type)
+        let gasLimitEstimate = try await getEstimateGasAsync(network: network, tx_type: "deployERC721", from: from, name: name, symbol: symbol, base_uri: token_base_uri, uri_type: uri_type)
+        let gasPriceEstimate = try await getEstimateGasAsync(network: network, tx_type: "baseFee")
+        
+        var gasPrice: BigUInt? = nil
+        var gasLimit: BigUInt? = nil
+        
+        if let valueArray = gasPriceEstimate["value"].arrayObject as? [[String: Any]] {
+            if let gas = valueArray[0]["gas"] as? String {
+                gasPrice = BigUInt(gas)
+            }
+        }
+        if let valueArray = gasLimitEstimate["value"].arrayObject as? [[String: Any]] {
+            if let gas = valueArray[0]["gas"] as? String {
+                gasLimit = BigUInt(gas)
+            }
+        }
         let data = "0x".data(using: .utf8)!
-        let contract = web3.contract(deployERC721, at: ca, abiVersion: 2)!
+        let contract = web3.contract(abiTransferNFT, at: ca, abiVersion: 2)!
         var transaction: CodableTransaction? = nil
         if(network == "bnb" || network == "bnbTest") {
             transaction = CodableTransaction(to:ca!, nonce:nonce, chainID:chainID, gasLimit: gasLimit!, gasPrice: gasPrice)
         } else {
             // tip 1gwei
-            transaction = CodableTransaction(type:.eip1559, to:ca!, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: 35000000000)
+            transaction = CodableTransaction(type:.eip1559, to:ca!, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
         }
         transaction?.from = fromEA
-        let contractData = contract.contract.method("deployedERC721", parameters: [name,symbol,token_base_uri,UInt8(uri_type),ownerEA], extraData: Data())
+        let contractData = contract.contract.method("deployWrapped721", parameters: [name,symbol,token_base_uri,UInt8(uri_type)], extraData: Data())
         transaction?.data = contractData!
 
         let formattedKey = privateKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1203,18 +1319,29 @@ public func deployErc721Async(network: String, from: String, name: String, symbo
         }
 
         let response = try await web3.eth.send(raw: transactionData)
-        result["result"] = JSON("OK")
-        result["transactionHash"] = JSON(response.hash)
-        return result
+        if(response.hash != nil){
+            result["transaction_hash"] = JSON(response.hash)
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "OK", "value": resultArray])
+        } else {
+            result["error"] = JSON("insufficient funds")
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        }
+        return resultData
     } catch let error{
-        result["result"] = JSON("FAIL")
-        result["transactionHash"] = JSON(error.localizedDescription)
-        return result
+        result["error"] = JSON(error.localizedDescription)
+        resultArray.arrayObject?.append(result)
+        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        return resultData
     }
 }
 
-public func deployErc1155Async(network: String, from: String, name: String, symbol: String, token_base_uri: String, owner: String, uri_type: String) async throws -> JSON {
-    var result: JSON = JSON()
+public func deployErc1155Async(network: String, from: String, name: String, symbol: String, token_base_uri: String, uri_type: String) async throws -> JSON {
+        var resultArray: JSON = JSON([])
+        var resultData: JSON = JSON()
+        var result: JSON = JSON()
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     do {
         let accountInfo = try await getAccountInfo(account: from)
         var privateKey = ""
@@ -1225,9 +1352,8 @@ public func deployErc1155Async(network: String, from: String, name: String, symb
             }
         }
         networkSettings(network: network)
-        let ownerEA = EthereumAddress(owner)
         let fromEA = EthereumAddress(from)
-        let ca = EthereumAddress(erc1155DeployContractAddress)
+        let ca = EthereumAddress(nftTransferContractAddress)
         
         var url = try await URL(string:rpcUrl)
         let web3 = try await Web3.new(url!)
@@ -1237,19 +1363,33 @@ public func deployErc1155Async(network: String, from: String, name: String, symb
 //        let web3 = try await Web3.new(rpcUrl)
         
         let nonce = try await web3.eth.getTransactionCount(for: fromEA!, onBlock: .pending)
-        let gasPrice = try await getEstimateGasAsync(network: network, txType: "baseFee")
-        let gasLimit = try await getEstimateGasAsync(network: network, txType: "deployERC1155", fromAddress: from, name: name, symbol: symbol, baseURI: token_base_uri, owner: owner, uriType:  uri_type)
+        let gasLimitEstimate = try await getEstimateGasAsync(network: network, tx_type: "deployERC1155", from: from, name: name, symbol: symbol, base_uri: token_base_uri, uri_type:  uri_type)
+        let gasPriceEstimate = try await getEstimateGasAsync(network: network, tx_type: "baseFee")
+        
+        var gasPrice: BigUInt? = nil
+        var gasLimit: BigUInt? = nil
+        
+        if let valueArray = gasPriceEstimate["value"].arrayObject as? [[String: Any]] {
+            if let gas = valueArray[0]["gas"] as? String {
+                gasPrice = BigUInt(gas)
+            }
+        }
+        if let valueArray = gasLimitEstimate["value"].arrayObject as? [[String: Any]] {
+            if let gas = valueArray[0]["gas"] as? String {
+                gasLimit = BigUInt(gas)
+            }
+        }
         let data = "0x".data(using: .utf8)!
-        let contract = web3.contract(deployERC1155, at: ca, abiVersion: 2)!
+        let contract = web3.contract(abiTransferNFT, at: ca, abiVersion: 2)!
         var transaction: CodableTransaction? = nil
         if(network == "bnb" || network == "bnbTest") {
             transaction = CodableTransaction(to:ca!, nonce:nonce, chainID:chainID, gasLimit: gasLimit!, gasPrice: gasPrice)
         } else {
             // tip 1gwei
-            transaction = CodableTransaction(type:.eip1559, to:ca!, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: 35000000000)
+            transaction = CodableTransaction(type:.eip1559, to:ca!, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
         }
         transaction?.from = fromEA
-        let contractData = contract.contract.method("deployedERC1155", parameters: [name,symbol, token_base_uri,UInt8(uri_type),ownerEA], extraData: Data())
+        let contractData = contract.contract.method("deployWrapped1155", parameters: [name,symbol, token_base_uri,UInt8(uri_type)], extraData: Data())
         transaction?.data = contractData!
 
         let formattedKey = privateKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1272,18 +1412,29 @@ public func deployErc1155Async(network: String, from: String, name: String, symb
         }
 
         let response = try await web3.eth.send(raw: transactionData)
-        result["result"] = JSON("OK")
-        result["transactionHash"] = JSON(response.hash)
-        return result
+        if(response.hash != nil){
+            result["transaction_hash"] = JSON(response.hash)
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "OK", "value": resultArray])
+        } else {
+            result["error"] = JSON("insufficient funds")
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        }
+        return resultData
     } catch let error{
-        result["result"] = JSON("FAIL")
-        result["transactionHash"] = JSON(error.localizedDescription)
-        return result
+        result["error"] = JSON(error.localizedDescription)
+        resultArray.arrayObject?.append(result)
+        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        return resultData
     }
 }
 
 public func mintErc721Async(network: String, from: String, to: String, token_uri: String, token_id: String, collection_id: String) async throws -> JSON {
-    var result: JSON = JSON()
+        var resultArray: JSON = JSON([])
+        var resultData: JSON = JSON()
+        var result: JSON = JSON()
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     do {
         let accountInfo = try await getAccountInfo(account: from)
         var privateKey = ""
@@ -1307,16 +1458,30 @@ public func mintErc721Async(network: String, from: String, to: String, token_uri
 //        let web3 = try await Web3.new(rpcUrl)
         
         let nonce = try await web3.eth.getTransactionCount(for: fromEA!, onBlock: .pending)
-        let gasPrice = try await getEstimateGasAsync(network: network, txType: "baseFee")
-        let gasLimit = try await getEstimateGasAsync(network: network, txType: "mintERC721", tokenAddress: collection_id, fromAddress: from, toAddress: to, tokenId: token_id, tokenURI: token_uri)
+        let gasLimitEstimate = try await getEstimateGasAsync(network: network, tx_type: "mintERC721", token_address: collection_id, from: from, to: to, token_id: token_id, token_uri: token_uri)
+        let gasPriceEstimate = try await getEstimateGasAsync(network: network, tx_type: "baseFee")
+        
+        var gasPrice: BigUInt? = nil
+        var gasLimit: BigUInt? = nil
+        
+        if let valueArray = gasPriceEstimate["value"].arrayObject as? [[String: Any]] {
+            if let gas = valueArray[0]["gas"] as? String {
+                gasPrice = BigUInt(gas)
+            }
+        }
+        if let valueArray = gasLimitEstimate["value"].arrayObject as? [[String: Any]] {
+            if let gas = valueArray[0]["gas"] as? String {
+                gasLimit = BigUInt(gas)
+            }
+        }
         let data = "0x".data(using: .utf8)!
-        let contract = web3.contract(kthuluErc721, at: ca, abiVersion: 2)!
+        let contract = web3.contract(abiWrappedERC721, at: ca, abiVersion: 2)!
         var transaction: CodableTransaction? = nil
         if(network == "bnb" || network == "bnbTest") {
             transaction = CodableTransaction(to:ca!, nonce:nonce, chainID:chainID, gasLimit: gasLimit!, gasPrice: gasPrice)
         } else {
             // tip 1gwei
-            transaction = CodableTransaction(type:.eip1559, to:ca!, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: 35000000000)
+            transaction = CodableTransaction(type:.eip1559, to:ca!, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
         }
         transaction?.from = fromEA
         let contractData = contract.contract.method("mint", parameters: [toEA,BigUInt(token_id),token_uri], extraData: Data())
@@ -1342,18 +1507,29 @@ public func mintErc721Async(network: String, from: String, to: String, token_uri
         }
 
         let response = try await web3.eth.send(raw: transactionData)
-        result["result"] = JSON("OK")
-        result["transactionHash"] = JSON(response.hash)
-        return result
+        if(response.hash != nil){
+            result["transaction_hash"] = JSON(response.hash)
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "OK", "value": resultArray])
+        } else {
+            result["error"] = JSON("insufficient funds")
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        }
+        return resultData
     } catch let error{
-        result["result"] = JSON("FAIL")
-        result["transactionHash"] = JSON(error.localizedDescription)
-        return result
+        result["error"] = JSON(error.localizedDescription)
+        resultArray.arrayObject?.append(result)
+        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        return resultData
     }
 }
 
 public func mintErc1155Async(network: String, from: String, to: String, token_uri: String, token_id: String, collection_id: String, amount: String) async throws -> JSON {
-    var result: JSON = JSON()
+        var resultArray: JSON = JSON([])
+        var resultData: JSON = JSON()
+        var result: JSON = JSON()
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     do {
         let accountInfo = try await getAccountInfo(account: from)
         var privateKey = ""
@@ -1377,19 +1553,33 @@ public func mintErc1155Async(network: String, from: String, to: String, token_ur
 //        let web3 = try await Web3.new(rpcUrl)
         
         let nonce = try await web3.eth.getTransactionCount(for: fromEA!, onBlock: .pending)
-        let gasPrice = try await getEstimateGasAsync(network: network, txType: "baseFee")
-        let gasLimit = try await getEstimateGasAsync(network: network, txType: "mintERC1155", tokenAddress: collection_id, fromAddress: from, toAddress: to, tokenAmount: amount, tokenId: token_id, tokenURI: token_uri)
+        let gasLimitEstimate = try await getEstimateGasAsync(network: network, tx_type: "mintERC1155", token_address: collection_id, from: from, to: to, amount: amount, token_id: token_id, token_uri: token_uri)
+        let gasPriceEstimate = try await getEstimateGasAsync(network: network, tx_type: "baseFee")
+        
+        var gasPrice: BigUInt? = nil
+        var gasLimit: BigUInt? = nil
+        
+        if let valueArray = gasPriceEstimate["value"].arrayObject as? [[String: Any]] {
+            if let gas = valueArray[0]["gas"] as? String {
+                gasPrice = BigUInt(gas)
+            }
+        }
+        if let valueArray = gasLimitEstimate["value"].arrayObject as? [[String: Any]] {
+            if let gas = valueArray[0]["gas"] as? String {
+                gasLimit = BigUInt(gas)
+            }
+        }
         let data = "0x".data(using: .utf8)!
-        let contract = web3.contract(kthuluErc1155, at: ca, abiVersion: 2)!
+        let contract = web3.contract(abiWrappedERC1155, at: ca, abiVersion: 2)!
         var transaction: CodableTransaction? = nil
         if(network == "bnb" || network == "bnbTest") {
             transaction = CodableTransaction(to:ca!, nonce:nonce, chainID:chainID, gasLimit: gasLimit!, gasPrice: gasPrice)
         } else {
             // tip 1gwei
-            transaction = CodableTransaction(type:.eip1559, to:ca!, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: 35000000000)
+            transaction = CodableTransaction(type:.eip1559, to:ca!, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
         }
         transaction?.from = fromEA
-        let contractData = contract.contract.method("mint", parameters: [toEA,BigUInt(token_id),BigUInt(amount),token_uri,[UInt8(0)]], extraData: Data())
+        let contractData = contract.contract.method("mint", parameters: [toEA,BigUInt(token_id),BigUInt(amount),token_uri], extraData: Data())
         transaction?.data = contractData!
 
         let formattedKey = privateKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1412,18 +1602,29 @@ public func mintErc1155Async(network: String, from: String, to: String, token_ur
         }
 
         let response = try await web3.eth.send(raw: transactionData)
-        result["result"] = JSON("OK")
-        result["transactionHash"] = JSON(response.hash)
-        return result
+        if(response.hash != nil){
+            result["transaction_hash"] = JSON(response.hash)
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "OK", "value": resultArray])
+        } else {
+            result["error"] = JSON("insufficient funds")
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        }
+        return resultData
     } catch let error{
-        result["result"] = JSON("FAIL")
-        result["transactionHash"] = JSON(error.localizedDescription)
-        return result
+        result["error"] = JSON(error.localizedDescription)
+        resultArray.arrayObject?.append(result)
+        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        return resultData
     }
 }
 
-public func batchMintErc721Async(network: String, from: String, to: String, token_id: [String], token_uri: [String], collection_id: String) async throws -> JSON {
-    var result: JSON = JSON()
+public func batchMintErc721Async(network: String, from: String, to: String, start_id: String, end_id: String, token_uri: [String], collection_id: String) async throws -> JSON {
+        var resultArray: JSON = JSON([])
+        var resultData: JSON = JSON()
+        var result: JSON = JSON()
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     do{
         let accountInfo = try await getAccountInfo(account: from)
         var privateKey = ""
@@ -1441,18 +1642,32 @@ public func batchMintErc721Async(network: String, from: String, to: String, toke
         var url = try await URL(string:rpcUrl)
         let web3 = try await Web3.new(url!)
         let nonce = try await web3.eth.getTransactionCount(for: fromEA!, onBlock: .pending)
-        let gasPrice = try await getEstimateGasAsync(network: network, txType: "baseFee")
-        let gasLimit = try await getEstimateGasAsync(network: network, txType: "batchMintERC721", tokenAddress: collection_id, fromAddress: from, toAddress: to, batchTokenId: token_id, batchTokenURI: token_uri)
+        let gasLimitEstimate = try await getEstimateGasAsync(network: network, tx_type: "batchMintERC721", token_address: collection_id, from: from, to: to, batch_token_uri: token_uri, start_id: start_id, end_id: end_id)
+        let gasPriceEstimate = try await getEstimateGasAsync(network: network, tx_type: "baseFee")
+        
+        var gasPrice: BigUInt? = nil
+        var gasLimit: BigUInt? = nil
+        
+        if let valueArray = gasPriceEstimate["value"].arrayObject as? [[String: Any]] {
+            if let gas = valueArray[0]["gas"] as? String {
+                gasPrice = BigUInt(gas)
+            }
+        }
+        if let valueArray = gasLimitEstimate["value"].arrayObject as? [[String: Any]] {
+            if let gas = valueArray[0]["gas"] as? String {
+                gasLimit = BigUInt(gas)
+            }
+        }
         let data = "0x".data(using: .utf8)!
-        let contract = web3.contract(kthuluErc721, at: ca, abiVersion: 2)!
+        let contract = web3.contract(abiWrappedERC721, at: ca, abiVersion: 2)!
         var transaction: CodableTransaction? = nil
         if(network == "bnb" || network == "bnbTest") {
             transaction = CodableTransaction(to:ca, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, gasPrice: gasPrice)
         } else {
-            transaction = CodableTransaction(type:.eip1559, to:ca, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: 35000000000)
+            transaction = CodableTransaction(type:.eip1559, to:ca, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
         }
         transaction?.from = fromEA
-        let contractData = contract.contract.method("mintBatch", parameters: [toEA, token_id.compactMap{BigUInt($0)}, token_uri], extraData: Data())
+        let contractData = contract.contract.method("mintBatch", parameters: [to, BigUInt(start_id), BigUInt(end_id), token_uri], extraData: Data())
         transaction?.data = contractData!
 
         let formattedKey = privateKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1475,18 +1690,29 @@ public func batchMintErc721Async(network: String, from: String, to: String, toke
         }
 
         let response = try await web3.eth.send(raw: transactionData)
-            result["result"] = JSON("OK")
-            result["transactionHash"] = JSON(response.hash)
-            return result
+        if(response.hash != nil){
+            result["transaction_hash"] = JSON(response.hash)
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "OK", "value": resultArray])
+        } else {
+            result["error"] = JSON("insufficient funds")
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        }
+        return resultData
     } catch let error{
-        result["result"] = JSON("FAIL")
-        result["transactionHash"] = JSON(error.localizedDescription)
-        return result
+        result["error"] = JSON(error.localizedDescription)
+        resultArray.arrayObject?.append(result)
+        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        return resultData
     }
 }
 
 public func batchMintErc1155Async(network: String, from: String, to: String, token_id: [String], token_uri: [String], collection_id: String, amount: [String]) async throws -> JSON {
-    var result: JSON = JSON()
+        var resultArray: JSON = JSON([])
+        var resultData: JSON = JSON()
+        var result: JSON = JSON()
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     do{
         let accountInfo = try await getAccountInfo(account: from)
         var privateKey = ""
@@ -1504,18 +1730,32 @@ public func batchMintErc1155Async(network: String, from: String, to: String, tok
         var url = try await URL(string:rpcUrl)
         let web3 = try await Web3.new(url!)
         let nonce = try await web3.eth.getTransactionCount(for: fromEA!, onBlock: .pending)
-        let gasPrice = try await getEstimateGasAsync(network: network, txType: "baseFee")
-        let gasLimit = try await getEstimateGasAsync(network: network, txType: "batchMintERC1155", tokenAddress: collection_id, fromAddress: from, toAddress: to, batchTokenId: token_id, batchTokenAmount: amount, batchTokenURI: token_uri)
+        let gasLimitEstimate = try await getEstimateGasAsync(network: network, tx_type: "batchMintERC1155", token_address: collection_id, from: from, to: to, batch_token_id: token_id, batch_token_amount: amount, batch_token_uri: token_uri)
+        let gasPriceEstimate = try await getEstimateGasAsync(network: network, tx_type: "baseFee")
+        
+        var gasPrice: BigUInt? = nil
+        var gasLimit: BigUInt? = nil
+        
+        if let valueArray = gasPriceEstimate["value"].arrayObject as? [[String: Any]] {
+            if let gas = valueArray[0]["gas"] as? String {
+                gasPrice = BigUInt(gas)
+            }
+        }
+        if let valueArray = gasLimitEstimate["value"].arrayObject as? [[String: Any]] {
+            if let gas = valueArray[0]["gas"] as? String {
+                gasLimit = BigUInt(gas)
+            }
+        }
         let data = "0x".data(using: .utf8)!
-        let contract = web3.contract(kthuluErc1155, at: ca, abiVersion: 2)!
+        let contract = web3.contract(abiWrappedERC1155, at: ca, abiVersion: 2)!
         var transaction: CodableTransaction? = nil
         if(network == "bnb" || network == "bnbTest") {
             transaction = CodableTransaction(to:ca, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, gasPrice: gasPrice)
         } else {
-            transaction = CodableTransaction(type:.eip1559, to:ca, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: 35000000000)
+            transaction = CodableTransaction(type:.eip1559, to:ca, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
         }
         transaction?.from = fromEA
-        let contractData = contract.contract.method("mintBatch", parameters: [toEA, token_id.compactMap{BigUInt($0)}, amount.compactMap{BigUInt($0)}, token_uri, [UInt8(0)]], extraData: Data())
+        let contractData = contract.contract.method("mintBatch", parameters: [toEA, token_id.compactMap{BigUInt($0)}, amount.compactMap{BigUInt($0)}, token_uri], extraData: Data())
         transaction?.data = contractData!
 
         let formattedKey = privateKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -1538,20 +1778,31 @@ public func batchMintErc1155Async(network: String, from: String, to: String, tok
         }
 
         let response = try await web3.eth.send(raw: transactionData)
-            result["result"] = JSON("OK")
-            result["transactionHash"] = JSON(response.hash)
-            return result
+        if(response.hash != nil){
+            result["transaction_hash"] = JSON(response.hash)
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "OK", "value": resultArray])
+        } else {
+            result["error"] = JSON("insufficient funds")
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        }
+        return resultData
     } catch let error{
-        result["result"] = JSON("FAIL")
-        result["transactionHash"] = JSON(error.localizedDescription)
-        return result
+        result["error"] = JSON(error.localizedDescription)
+        resultArray.arrayObject?.append(result)
+        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        return resultData
     }
 }
 
-public func burnErc721Async(network: String, from: String, token_id: String, collection_id: String) async throws -> JSON {
-    var result: JSON = JSON()
+public func burnErc721Async(network: String, owner: String, token_id: String, collection_id: String) async throws -> JSON {
+        var resultArray: JSON = JSON([])
+        var resultData: JSON = JSON()
+        var result: JSON = JSON()
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     do {
-        let accountInfo = try await getAccountInfo(account: from)
+        let accountInfo = try await getAccountInfo(account: owner)
         var privateKey = ""
         if(accountInfo["value"] != []){
             let value = accountInfo["value"]
@@ -1560,7 +1811,7 @@ public func burnErc721Async(network: String, from: String, token_id: String, col
             }
         }
 
-        let fromEA = EthereumAddress(from)
+        let fromEA = EthereumAddress(owner)
         let ca = EthereumAddress(collection_id)
         
         networkSettings(network: network)
@@ -1568,16 +1819,30 @@ public func burnErc721Async(network: String, from: String, token_id: String, col
         let web3 = try await Web3.new(url!)
         
         let nonce = try await web3.eth.getTransactionCount(for: fromEA!, onBlock: .pending)
-        let gasPrice = try await getEstimateGasAsync(network: network, txType: "baseFee")
-        let gasLimit = try await getEstimateGasAsync(network: network, txType: "burnERC721", tokenAddress: collection_id, fromAddress: from, tokenId: token_id)
+        let gasLimitEstimate = try await getEstimateGasAsync(network: network, tx_type: "burnERC721", token_address: collection_id, from: owner, token_id: token_id)
+        let gasPriceEstimate = try await getEstimateGasAsync(network: network, tx_type: "baseFee")
+        
+        var gasPrice: BigUInt? = nil
+        var gasLimit: BigUInt? = nil
+        
+        if let valueArray = gasPriceEstimate["value"].arrayObject as? [[String: Any]] {
+            if let gas = valueArray[0]["gas"] as? String {
+                gasPrice = BigUInt(gas)
+            }
+        }
+        if let valueArray = gasLimitEstimate["value"].arrayObject as? [[String: Any]] {
+            if let gas = valueArray[0]["gas"] as? String {
+                gasLimit = BigUInt(gas)
+            }
+        }
         let data = "0x".data(using: .utf8)!
-        let contract = web3.contract(kthuluErc721, at: ca, abiVersion: 2)!
+        let contract = web3.contract(abiWrappedERC721, at: ca, abiVersion: 2)!
         var transaction: CodableTransaction? = nil
         if(network == "bnb" || network == "bnbTest") {
             transaction = CodableTransaction(to:ca!, nonce:nonce, chainID:chainID, gasLimit: gasLimit!, gasPrice: gasPrice)
         } else {
             // tip 1gwei
-            transaction = CodableTransaction(type:.eip1559, to:ca!, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: 35000000000)
+            transaction = CodableTransaction(type:.eip1559, to:ca!, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
         }
         transaction?.from = fromEA
         let contractData = contract.contract.method("burn", parameters: [BigUInt(token_id)], extraData: Data())
@@ -1603,20 +1868,31 @@ public func burnErc721Async(network: String, from: String, token_id: String, col
         }
 
         let response = try await web3.eth.send(raw: transactionData)
-        result["result"] = JSON("OK")
-        result["transactionHash"] = JSON(response.hash)
-        return result
+        if(response.hash != nil){
+            result["transaction_hash"] = JSON(response.hash)
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "OK", "value": resultArray])
+        } else {
+            result["error"] = JSON("insufficient funds")
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        }
+        return resultData
     } catch let error{
-        result["result"] = JSON("FAIL")
-        result["transactionHash"] = JSON(error.localizedDescription)
-        return result
+        result["error"] = JSON(error.localizedDescription)
+        resultArray.arrayObject?.append(result)
+        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        return resultData
     }
 }
 
-public func burnErc1155Async(network: String, from: String, token_id: String, collection_id: String, amount: String) async throws -> JSON {
-    var result: JSON = JSON()
+public func burnErc1155Async(network: String, owner: String, token_id: String, collection_id: String, amount: String) async throws -> JSON {
+        var resultArray: JSON = JSON([])
+        var resultData: JSON = JSON()
+        var result: JSON = JSON()
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     do {
-        let accountInfo = try await getAccountInfo(account: from)
+        let accountInfo = try await getAccountInfo(account: owner)
         var privateKey = ""
         if(accountInfo["value"] != []){
             let value = accountInfo["value"]
@@ -1625,7 +1901,7 @@ public func burnErc1155Async(network: String, from: String, token_id: String, co
             }
         }
 
-        let fromEA = EthereumAddress(from)
+        let fromEA = EthereumAddress(owner)
         let ca = EthereumAddress(collection_id)
         
         networkSettings(network: network)
@@ -1633,16 +1909,30 @@ public func burnErc1155Async(network: String, from: String, token_id: String, co
         let web3 = try await Web3.new(url!)
         
         let nonce = try await web3.eth.getTransactionCount(for: fromEA!, onBlock: .pending)
-        let gasPrice = try await getEstimateGasAsync(network: network, txType: "baseFee")
-        let gasLimit = try await getEstimateGasAsync(network: network, txType: "burnERC1155", tokenAddress: collection_id, fromAddress: from, tokenAmount: amount, tokenId: token_id)
+        let gasLimitEstimate = try await getEstimateGasAsync(network: network, tx_type: "burnERC1155", token_address: collection_id, from: owner, amount: amount, token_id: token_id)
+        let gasPriceEstimate = try await getEstimateGasAsync(network: network, tx_type: "baseFee")
+        
+        var gasPrice: BigUInt? = nil
+        var gasLimit: BigUInt? = nil
+        
+        if let valueArray = gasPriceEstimate["value"].arrayObject as? [[String: Any]] {
+            if let gas = valueArray[0]["gas"] as? String {
+                gasPrice = BigUInt(gas)
+            }
+        }
+        if let valueArray = gasLimitEstimate["value"].arrayObject as? [[String: Any]] {
+            if let gas = valueArray[0]["gas"] as? String {
+                gasLimit = BigUInt(gas)
+            }
+        }
         let data = "0x".data(using: .utf8)!
-        let contract = web3.contract(kthuluErc1155, at: ca, abiVersion: 2)!
+        let contract = web3.contract(abiWrappedERC1155, at: ca, abiVersion: 2)!
         var transaction: CodableTransaction? = nil
         if(network == "bnb" || network == "bnbTest") {
             transaction = CodableTransaction(to:ca!, nonce:nonce, chainID:chainID, gasLimit: gasLimit!, gasPrice: gasPrice)
         } else {
             // tip 1gwei
-            transaction = CodableTransaction(type:.eip1559, to:ca!, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: 35000000000)
+            transaction = CodableTransaction(type:.eip1559, to:ca!, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
         }
         transaction?.from = fromEA
         let contractData = contract.contract.method("burn", parameters: [fromEA,BigUInt(token_id),BigUInt(amount)], extraData: Data())
@@ -1668,18 +1958,29 @@ public func burnErc1155Async(network: String, from: String, token_id: String, co
         }
 
         let response = try await web3.eth.send(raw: transactionData)
-        result["result"] = JSON("OK")
-        result["transactionHash"] = JSON(response.hash)
-        return result
+        if(response.hash != nil){
+            result["transaction_hash"] = JSON(response.hash)
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "OK", "value": resultArray])
+        } else {
+            result["error"] = JSON("insufficient funds")
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        }
+        return resultData
     } catch let error{
-        result["result"] = JSON("FAIL")
-        result["transactionHash"] = JSON(error.localizedDescription)
-        return result
+        result["error"] = JSON(error.localizedDescription)
+        resultArray.arrayObject?.append(result)
+        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        return resultData
     }
 }
 
 
-public func verifyNFT(network: String, tokenId: String, contractAddress: String, apiKey: String) async throws -> JSON {
+public func verifyNFT(network: String, token_id: String, collection_id: String, api_key: String?) async throws -> JSON {
+    var resultArray: JSON = JSON([])
+    var resultData: JSON = JSON()
+    resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     var result: JSON = [
         "ContractVerify": false,
         "TokenURIAvailable": false,
@@ -1696,115 +1997,138 @@ public func verifyNFT(network: String, tokenId: String, contractAddress: String,
     var imageURL: String? = nil
     do {
         var query =
-            "SELECT nft_type FROM " +
+            "SELECT nft_type, token_uri, token_info, image_url FROM " +
                 "nft_token_table " +
             "WHERE " +
         "network = '\(network)' " +
         "AND " +
-            "collection_id = '\(contractAddress)' "
+            "collection_id = '\(collection_id)' " +
         "AND " +
-            "token_id = '\(tokenId)' "
+            "token_id = '\(token_id)' "
         do {
             let res = try await sqlJsonObject(sqlQuery: query)
             nftType = res["nft_type"].string
             tokenURI = res["token_uri"].string
             tokenInfo = res["token_info"].string
             imageURL = res["image_url"].string
-        } catch {
-            throw error
+        } catch let error{
+            result["error"] = JSON(error.localizedDescription)
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+            return resultData
         }
 
         // step1. NFT 컨트랙트 검증
-        //        let hostUrl = "https://api.etherscan.io/api?module=contract&action=getabi&address=\(contractAddress)&apikey=\(apiKey)"
-        let hostUrl = "https://api.polygonscan.com/api?module=contract&action=getabi&address=\(contractAddress)&apikey=\(apiKey)"
+        var hostUrl: String = ""
+        switch network {
+        case "ethereum":
+            hostUrl = "https://api.etherscan.com/api?module=contract&action=getabi&address=\(collection_id)&apikey=\(api_key)"
+        case "cypress":
+            hostUrl = ""
+        case "polygon":
+            hostUrl = "https://api.polygonscan.com/api?module=contract&action=getabi&address=\(collection_id)&apikey=\(api_key)"
+        case "bnb":
+            hostUrl = "https://api.bscscan.com/api?module=contract&action=getabi&address=\(collection_id)&apikey=\(api_key)"
+        default:
+            result = [:]
+            result["error"] = JSON("DB info NULL")
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+            return resultData
+        }
 
 
         do {
-            guard let url = URL(string: hostUrl) else {
-                print("Invalid URL")
-                return false
-            }
-            
-            let (data, _) = try await URLSession.shared.data(from: url)
-            guard let responseJSON = try JSONSerialization.jsonObject(with: data) as? [String: Any],
-                  let apiResult = responseJSON["result"] as? String else {
-                print("Invalid API response")
-                return false
-            }
-            
-            // Parse the ABI if it exists
-            let contractABI = (apiResult != "Contract source code not verified") ? try JSONSerialization.jsonObject(with: Data(apiResult.utf8)) as? [[String: Any]] : []
-            
-            if contractABI!.isEmpty {
+            if(network == "cypress") {
                 result["ContractVerify"] = false
                 result["ContractStandard"] = false
             } else {
-                result["ContractVerify"] = true
-            }
-            
-            let bytecodeFunctions = contractABI?.filter { $0["type"] as? String == "function" } ?? []
-        //            print(bytecodeFunctions)
-            if(nftType == "erc721") {
-                let balanceOf = bytecodeFunctions.contains { ($0["name"] as? String) == "balanceOf" }
-                let ownerOf = bytecodeFunctions.contains { ($0["name"] as? String) == "ownerOf" }
-                let transferFrom = bytecodeFunctions.contains { ($0["name"] as? String) == "transferFrom" }
-                let approve = bytecodeFunctions.contains { ($0["name"] as? String) == "approve" }
-                let setApprovalForAll = bytecodeFunctions.contains { ($0["name"] as? String) == "setApprovalForAll" }
-                let getApproved = bytecodeFunctions.contains { ($0["name"] as? String) == "getApproved" }
-                let isApprovedForAll = bytecodeFunctions.contains { ($0["name"] as? String) == "isApprovedForAll" }
-                
-                var safeTransferFromWith_data = false
-                var safeTransferFromWithout_data = false
-                
-                for jsonObject in bytecodeFunctions {
-                    if let name = jsonObject["name"] as? String,
-                       name == "safeTransferFrom",
-                       let inputs = jsonObject["inputs"] as? [[String: String]],
-                       inputs.contains(where: { $0["name"] == "_data" }) {
-                        safeTransferFromWith_data = true
-                    }
-                    if let name = jsonObject["name"] as? String,
-                       name == "safeTransferFrom" {
-                        safeTransferFromWithout_data = true
-                    }
+                guard let url = URL(string: hostUrl) else {
+                    print("Invalid URL")
+                    return false
                 }
                 
-                let contractStandard: JSON = [
-                    "balanceof": balanceOf,
-                    "ownerOf": ownerOf,
-                    "transferFrom": transferFrom,
-                    "approve": approve,
-                    "setApprovalForAll": setApprovalForAll,
-                    "getApproved": getApproved,
-                    "isApprovedForAll": isApprovedForAll,
-                    "safeTransferFromWith_data": safeTransferFromWith_data,
-                    "safeTransferFromWithout_data": safeTransferFromWithout_data
-                ]
-                result["ContractStandard"] = contractStandard
-            } else if(nftType == "erc1155") {
-                let balanceOf = bytecodeFunctions.contains { ($0["name"] as? String) == "balanceOf" }
-                let balanceOfBatch = bytecodeFunctions.contains { ($0["name"] as? String) == "balanceOfBatch" }
-                let setApprovalForAll = bytecodeFunctions.contains { ($0["name"] as? String) == "setApprovalForAll" }
-                let isApprovedForAll = bytecodeFunctions.contains { ($0["name"] as? String) == "isApprovedForAll" }
-                let safeTransferFrom = bytecodeFunctions.contains { ($0["name"] as? String) == "safeTransferFrom" }
-                let safeBatchTransferFrom = bytecodeFunctions.contains { ($0["name"] as? String) == "safeBatchTransferFrom" }
+                let (data, _) = try await URLSession.shared.data(from: url)
+                guard let responseJSON = try JSONSerialization.jsonObject(with: data) as? [String: Any],
+                      let apiResult = responseJSON["result"] as? String else {
+                    print("Invalid API response")
+                    return false
+                }
                 
-                let contractStandard: JSON = [
-                    "balanceof": balanceOf,
-                    "balanceOfBatch": balanceOfBatch,
-                    "setApprovalForAll": setApprovalForAll,
-                    "isApprovedForAll": isApprovedForAll,
-                    "safeTransferFrom": safeTransferFrom,
-                    "safeBatchTransferFrom": safeBatchTransferFrom
-                ]
-                result["ContractStandard"] = contractStandard
+                // Parse the ABI if it exists
+                let contractABI = (apiResult != "Contract source code not verified") ? try JSONSerialization.jsonObject(with: Data(apiResult.utf8)) as? [[String: Any]] : []
+                
+                if contractABI!.isEmpty {
+                    result["ContractVerify"] = false
+                    result["ContractStandard"] = false
+                } else {
+                    result["ContractVerify"] = true
+                }
+                
+                let bytecodeFunctions = contractABI?.filter { $0["type"] as? String == "function" } ?? []
+                //            print(bytecodeFunctions)
+                if(nftType == "erc721") {
+                    let balanceOf = bytecodeFunctions.contains { ($0["name"] as? String) == "balanceOf" }
+                    let ownerOf = bytecodeFunctions.contains { ($0["name"] as? String) == "ownerOf" }
+                    let transferFrom = bytecodeFunctions.contains { ($0["name"] as? String) == "transferFrom" }
+                    let approve = bytecodeFunctions.contains { ($0["name"] as? String) == "approve" }
+                    let setApprovalForAll = bytecodeFunctions.contains { ($0["name"] as? String) == "setApprovalForAll" }
+                    let getApproved = bytecodeFunctions.contains { ($0["name"] as? String) == "getApproved" }
+                    let isApprovedForAll = bytecodeFunctions.contains { ($0["name"] as? String) == "isApprovedForAll" }
+                    
+                    var safeTransferFromWith_data = false
+                    var safeTransferFromWithout_data = false
+                    
+                    for jsonObject in bytecodeFunctions {
+                        if let name = jsonObject["name"] as? String,
+                           name == "safeTransferFrom",
+                           let inputs = jsonObject["inputs"] as? [[String: String]],
+                           inputs.contains(where: { $0["name"] == "_data" }) {
+                            safeTransferFromWith_data = true
+                        }
+                        if let name = jsonObject["name"] as? String,
+                           name == "safeTransferFrom" {
+                            safeTransferFromWithout_data = true
+                        }
+                    }
+                    
+                    let contractStandard: JSON = [
+                        "balanceof": balanceOf,
+                        "ownerOf": ownerOf,
+                        "transferFrom": transferFrom,
+                        "approve": approve,
+                        "setApprovalForAll": setApprovalForAll,
+                        "getApproved": getApproved,
+                        "isApprovedForAll": isApprovedForAll,
+                        "safeTransferFromWith_data": safeTransferFromWith_data,
+                        "safeTransferFromWithout_data": safeTransferFromWithout_data
+                    ]
+                    result["ContractStandard"] = contractStandard
+                } else if(nftType == "erc1155") {
+                    let balanceOf = bytecodeFunctions.contains { ($0["name"] as? String) == "balanceOf" }
+                    let balanceOfBatch = bytecodeFunctions.contains { ($0["name"] as? String) == "balanceOfBatch" }
+                    let setApprovalForAll = bytecodeFunctions.contains { ($0["name"] as? String) == "setApprovalForAll" }
+                    let isApprovedForAll = bytecodeFunctions.contains { ($0["name"] as? String) == "isApprovedForAll" }
+                    let safeTransferFrom = bytecodeFunctions.contains { ($0["name"] as? String) == "safeTransferFrom" }
+                    let safeBatchTransferFrom = bytecodeFunctions.contains { ($0["name"] as? String) == "safeBatchTransferFrom" }
+                    
+                    let contractStandard: JSON = [
+                        "balanceof": balanceOf,
+                        "balanceOfBatch": balanceOfBatch,
+                        "setApprovalForAll": setApprovalForAll,
+                        "isApprovedForAll": isApprovedForAll,
+                        "safeTransferFrom": safeTransferFrom,
+                        "safeBatchTransferFrom": safeBatchTransferFrom
+                    ]
+                    result["ContractStandard"] = contractStandard
+                }
             }
             
-            let ca = EthereumAddress(contractAddress)
+            let ca = EthereumAddress(collection_id)
             networkSettings(network: network)
             var rpc = try await URL(string:rpcUrl)
             let web3 = try await Web3.new(rpc!)
-            let contract = web3.contract(kthuluErc721, at: ca, abiVersion: 2)!
+            let contract = web3.contract(abiWrappedERC721, at: ca, abiVersion: 2)!
             var parameter = ""
             if(nftType == "erc721") {
                 parameter = "0x80ac58cd"
@@ -1816,8 +2140,6 @@ public func verifyNFT(network: String, tokenId: String, contractAddress: String,
             if let value = response["0"] {
                 result["supportsInterface"] = JSON(value)
             }
-            
-            
             // step2. tokenURI검증
             if tokenURI == nil || tokenURI?.isEmpty == true {
             } else {
@@ -1954,17 +2276,21 @@ public func verifyNFT(network: String, tokenId: String, contractAddress: String,
                     }
                 }
             }
-            
-            return result
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "OK", "value": resultArray])
+            return resultData
         } catch {
             print("Error: \(error)")
-            return result
+            return resultData
         }
     }
 }
 
 public func chkNFTHolder(network: String, account: String, collection_id: String, token_id: String) async throws -> JSON {
-    var result: JSON = JSON()
+        var resultArray: JSON = JSON([])
+        var resultData: JSON = JSON()
+        var result: JSON = JSON()
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     var query =
         "SELECT network, collection_id, token_id, nft_type FROM " +
             "nft_token_table " +
@@ -2014,7 +2340,7 @@ public func chkNFTHolder(network: String, account: String, collection_id: String
             }
         } else {
             let owner = EthereumAddress(from: account)
-            let contract = web3.contract(kthuluErc1155, at: ca)!
+            let contract = web3.contract(abiWrappedERC1155, at: ca)!
             let readOp = contract.createReadOperation("balanceOf",parameters: [owner,BigUInt(token_id!)])!
             let response = try await readOp.callContractMethod()
             print(response)

@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import BigInt
 import web3swift
 import Web3Core
 import SwiftyJSON
@@ -16,6 +17,17 @@ public func createAccountsAsync(network: [String]) async throws -> JSON {
     var resultArray: JSON = JSON([])
     var resultData: JSON = JSON()
     resultData = changeJsonObject(useData: ["result": "Fail", "value": resultArray])
+    
+    let allowedStrings: Set<String> = ["ethereum", "cypress", "polygon", "bnb"]
+
+        for net in network {
+            if !allowedStrings.contains(net) {
+                let returnData = ["error" :  "Error: \(net) is not allowed."]
+                resultArray.arrayObject?.append(changeJsonObject(useData: returnData))
+                resultData = changeJsonObject(useData: ["result": "FAIL", "value": resultArray])
+                return resultData
+            }
+        }
     
     let bitsOfEntropy: Int = 128
     let mnemonics = try! BIP39.generateMnemonics(bitsOfEntropy: bitsOfEntropy)!
@@ -55,8 +67,6 @@ public func createAccountsAsync(network: [String]) async throws -> JSON {
             "mnemonic": encrytMnemonics
         ]
         // storage save
-//        saveDataList.arrayObject?.append(changeJsonObject(useData: saveData))
-//        saveJsonData(jsonObject: saveDataList, key: account)
         saveJsonData(jsonObject: changeJsonObject(useData: saveData), key: account)
         
         // return data result "OK", add array
@@ -270,51 +280,63 @@ public func getBalanceAsync(network: String, owner: String, token_id: String? = 
     
 }
 
-// Get token info async
 public func getTokenInfoAsync(network: String, token_id: String) async throws -> JSON {
     var jsonData: JSON = JSON()
-        var resultArray: JSON = JSON([])
-        var resultData: JSON = JSON()
+    var resultArray: JSON = JSON([])
+    var resultData: JSON = JSON()
 
-        networkSettings(network: network)
-        let url = try await URL(string: rpcUrl)
-        let web3 = try await Web3.new(url!)
+    networkSettings(network: network)
+    let url = try await URL(string: rpcUrl)
+    let web3 = try await Web3.new(url!)
     
-        let contract = web3.contract(Web3.Utils.erc20ABI, at: EthereumAddress(token_id)!, abiVersion: 2)!
+    let contract = web3.contract(Web3.Utils.erc20ABI, at: EthereumAddress(token_id)!, abiVersion: 2)!
+    
+    var intDecimals = 0;
 
-        // Fetch Token Name
+    do {
         let nameResponse = try await contract.createReadOperation("name")!.callContractMethod()
-        guard let name = nameResponse["0"] as? String else {
-            throw Web3Error.inputError(desc: "Contract may not be ERC20 compatible, cannot get name")
+        if let name = nameResponse["0"] as? String {
+            jsonData["name"] = JSON(name)
         }
+    } catch {
+        // handle error, if you wish to log it
+    }
 
-        // Fetch Token Symbol
+    do {
         let symbolResponse = try await contract.createReadOperation("symbol")!.callContractMethod()
-        guard let symbol = symbolResponse["0"] as? String else {
-            throw Web3Error.inputError(desc: "Contract may not be ERC20 compatible, cannot get symbol")
+        if let symbol = symbolResponse["0"] as? String {
+            jsonData["symbol"] = JSON(symbol)
         }
+    } catch {
+        // handle error
+    }
 
-        let callResult = try await contract
-            .createReadOperation("decimals")!
-            .callContractMethod()
-        
-        var decimals = BigUInt(0)
-        guard let dec = callResult["0"], let decTyped = dec as? BigUInt else {
-            throw Web3Error.inputError(desc: "Contract may not be ERC20 compatible, cannot get decimals")
+    do {
+        let callResult = try await contract.createReadOperation("decimals")!.callContractMethod()
+        if let dec = callResult["0"], let decTyped = dec as? BigUInt {
+            intDecimals = Int(decTyped)
+            jsonData["decimals"] = JSON(intDecimals)
         }
-        decimals = decTyped
-        
-        let intDecimals = Int(decimals)
-    
+    } catch {
+        // handle error
+    }
 
-        jsonData["name"] = JSON(name)
-        jsonData["symbol"] = JSON(symbol)
-        jsonData["decimals"] = JSON(intDecimals)
-        resultArray.arrayObject?.append(jsonData)
-        resultData["result"] = "OK"
-        resultData["value"] = JSON(resultArray)
-    
-        return resultData
+    do {
+        let totalResponse = try await contract.createReadOperation("totalSupply")!.callContractMethod()
+        if let totalSupply = totalResponse["0"] as? BigUInt {
+            let totalSupplyString = String(totalSupply)
+            let totalSupplyInTokens = Double(totalSupplyString)! / pow(10.0, Double(intDecimals))
+            jsonData["total_supply"] = JSON(totalSupplyInTokens)
+        }
+    } catch {
+        // handle error
+    }
+
+    resultArray.arrayObject?.append(jsonData)
+    resultData["result"] = "OK"
+    resultData["value"] = JSON(resultArray)
+
+    return resultData
 }
 
 // Get token info list async
@@ -535,9 +557,9 @@ public func getUsersAsync(owner: String) async throws -> JSON {
 }
 
 public func signMessage(
+    network: String,
     fromAddress: String,
     collection_id: String,
-    network: String,
     token_id: String,
     prefix: String) async throws -> String {
     
@@ -571,10 +593,10 @@ public func signMessage(
 }
 
 public func getSignerAddressFromSignature(
+    network: String,
     signature:String,
     fromAddress: String,
     collection_id: String,
-    network: String,
     token_id: String,
     prefix: String) async throws -> String {
     
