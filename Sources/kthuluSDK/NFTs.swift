@@ -2099,10 +2099,10 @@ public func bridgeErc721Async( network: String,
         var txFee = BigUInt(0)
         var networkHex = BigUInt(0)
         if(toNetwork == "POLYGON") {
-            txFee = BigUInt(15000000000000000)
+            txFee = BigUInt(5000000000000000)
             networkHex = BigUInt(0x504f4c59474f4e)
         } else {
-            txFee = BigUInt(2000000000000000)
+            txFee = BigUInt(5000000000000000)
             networkHex = BigUInt(0x4b4c4159544e)
         }
         let gasLimit = BigUInt(500000)
@@ -2193,10 +2193,10 @@ public func bridgeErc1155Async( network: String,
         var txFee = BigUInt(0)
         var networkHex = BigUInt(0)
         if(toNetwork == "POLYGON") {
-            txFee = BigUInt(15000000000000000)
+            txFee = BigUInt(5000000000000000)
             networkHex = BigUInt(0x504f4c59474f4e)
         } else {
-            txFee = BigUInt(2000000000000000)
+            txFee = BigUInt(5000000000000000)
             networkHex = BigUInt(0x4b4c4159544e)
         }
         let gasLimit = BigUInt(500000)
