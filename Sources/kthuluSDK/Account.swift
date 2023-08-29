@@ -165,7 +165,6 @@ public func restoreAccountAsync(network: [String]? = nil, privateKey: String? = 
             ]
             
             saveJsonData(jsonObject: changeJsonObject(useData: saveData), key: account)
-            print(loadJsonData(key: account)!)
             resultData = changeJsonObject(useData: ["result": "OK", "value": resultArray])
         }
     } else {
