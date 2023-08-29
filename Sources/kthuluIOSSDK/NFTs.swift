@@ -884,7 +884,7 @@ public func sendNFT721TransactionAsync(network: String, from: String, to: String
         var result: JSON = JSON()
         resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     do {
-        let getAddressInfo = try await getAccountInfo(account: from)
+        let getAddressInfo = try await getAccountInfoAsync(account: from)
         var privateKey = ""
         if(getAddressInfo["value"] != []){
             let value = getAddressInfo["value"]
@@ -978,7 +978,7 @@ public func sendNFT1155TransactionAsync(network: String, from: String, to: Strin
         var result: JSON = JSON()
         resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     do {
-        let getAddressInfo = try await getAccountInfo(account: from)
+        let getAddressInfo = try await getAccountInfoAsync(account: from)
         var privateKey = ""
         if(getAddressInfo["value"] != []){
             let value = getAddressInfo["value"]
@@ -1070,7 +1070,7 @@ public func sendErc721BatchAsync(network: String, from: String, to: String, toke
         var result: JSON = JSON()
         resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     do{
-        let accountInfo = try await getAccountInfo(account: from)
+        let accountInfo = try await getAccountInfoAsync(account: from)
         var privateKey = ""
         if(accountInfo["value"] != []){
             let value = accountInfo["value"]
@@ -1157,7 +1157,7 @@ public func sendErc1155BatchAsync(network: String, from: String, to: String, tok
         var result: JSON = JSON()
         resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     do {
-        let accountInfo = try await getAccountInfo(account: from)
+        let accountInfo = try await getAccountInfoAsync(account: from)
         var privateKey = ""
         if(accountInfo["value"] != []){
             let value = accountInfo["value"]
@@ -1250,7 +1250,7 @@ public func deployErc721Async(network: String, from: String, name: String, symbo
         var result: JSON = JSON()
         resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     do {
-        let accountInfo = try await getAccountInfo(account: from)
+        let accountInfo = try await getAccountInfoAsync(account: from)
         var privateKey = ""
         if(accountInfo["value"] != []){
             let value = accountInfo["value"]
@@ -1343,7 +1343,7 @@ public func deployErc1155Async(network: String, from: String, name: String, symb
         var result: JSON = JSON()
         resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     do {
-        let accountInfo = try await getAccountInfo(account: from)
+        let accountInfo = try await getAccountInfoAsync(account: from)
         var privateKey = ""
         if(accountInfo["value"] != []){
             let value = accountInfo["value"]
@@ -1436,7 +1436,7 @@ public func mintErc721Async(network: String, from: String, to: String, token_uri
         var result: JSON = JSON()
         resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     do {
-        let accountInfo = try await getAccountInfo(account: from)
+        let accountInfo = try await getAccountInfoAsync(account: from)
         var privateKey = ""
         if(accountInfo["value"] != []){
             let value = accountInfo["value"]
@@ -1531,7 +1531,7 @@ public func mintErc1155Async(network: String, from: String, to: String, token_ur
         var result: JSON = JSON()
         resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     do {
-        let accountInfo = try await getAccountInfo(account: from)
+        let accountInfo = try await getAccountInfoAsync(account: from)
         var privateKey = ""
         if(accountInfo["value"] != []){
             let value = accountInfo["value"]
@@ -1626,7 +1626,7 @@ public func batchMintErc721Async(network: String, from: String, to: String, star
         var result: JSON = JSON()
         resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     do{
-        let accountInfo = try await getAccountInfo(account: from)
+        let accountInfo = try await getAccountInfoAsync(account: from)
         var privateKey = ""
         if(accountInfo["value"] != []){
             let value = accountInfo["value"]
@@ -1714,7 +1714,7 @@ public func batchMintErc1155Async(network: String, from: String, to: String, tok
         var result: JSON = JSON()
         resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     do{
-        let accountInfo = try await getAccountInfo(account: from)
+        let accountInfo = try await getAccountInfoAsync(account: from)
         var privateKey = ""
         if(accountInfo["value"] != []){
             let value = accountInfo["value"]
@@ -1802,7 +1802,7 @@ public func burnErc721Async(network: String, owner: String, token_id: String, co
         var result: JSON = JSON()
         resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     do {
-        let accountInfo = try await getAccountInfo(account: owner)
+        let accountInfo = try await getAccountInfoAsync(account: owner)
         var privateKey = ""
         if(accountInfo["value"] != []){
             let value = accountInfo["value"]
@@ -1892,7 +1892,7 @@ public func burnErc1155Async(network: String, owner: String, token_id: String, c
         var result: JSON = JSON()
         resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     do {
-        let accountInfo = try await getAccountInfo(account: owner)
+        let accountInfo = try await getAccountInfoAsync(account: owner)
         var privateKey = ""
         if(accountInfo["value"] != []){
             let value = accountInfo["value"]
@@ -1976,8 +1976,283 @@ public func burnErc1155Async(network: String, owner: String, token_id: String, c
     }
 }
 
+public func approveSetupNftAsync(network: String, from: String, collection_id: String) async throws -> JSON {
+        var resultArray: JSON = JSON([])
+        var resultData: JSON = JSON()
+        var result: JSON = JSON()
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
+    do {
+        let accountInfo = try await getAccountInfoAsync(account: from)
+        var privateKey = ""
+        if(accountInfo["value"] != []){
+            let value = accountInfo["value"]
+            if value[0]["private"].string != nil {
+                privateKey = value[0]["private"].string!
+            }
+        }
 
-public func verifyNFT(network: String, token_id: String, collection_id: String, api_key: String?) async throws -> JSON {
+        let fromEA = EthereumAddress(from)
+        let ca = EthereumAddress(collection_id)
+        
+        networkSettings(network: network)
+        var url = try await URL(string:rpcUrl)
+        let web3 = try await Web3.new(url!)
+        
+//        let rpcUrl = try URL(string: getRPCUrl(network: network))!
+//        let chainID = try getChainID(network: network)
+//        let web3 = try await Web3.new(rpcUrl)
+        
+        let nonce = try await web3.eth.getTransactionCount(for: fromEA!, onBlock: .pending)
+        let gasPriceEstimate = try await getEstimateGasAsync(network: network, tx_type: "baseFee")
+        
+        var gasPrice: BigUInt? = nil
+        
+        if let valueArray = gasPriceEstimate["value"].arrayObject as? [[String: Any]] {
+            if let gas = valueArray[0]["gas"] as? String {
+                gasPrice = BigUInt(gas)
+            }
+        }
+        let data = "0x".data(using: .utf8)!
+        let contract = web3.contract(abiWrappedERC721, at: ca, abiVersion: 2)!
+        var transaction: CodableTransaction? = nil
+        if(network == "bnb" || network == "bnbTest") {
+            transaction = CodableTransaction(to:ca!, nonce:nonce, chainID:chainID, gasLimit: BigUInt(100000), gasPrice: gasPrice)
+        } else {
+            // tip 1gwei
+            transaction = CodableTransaction(type:.eip1559, to:ca!, nonce:nonce, chainID:chainID, gasLimit:BigUInt(100000), maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
+        }
+        transaction?.from = fromEA
+        let contractData = contract.contract.method("setApprovalForAll", parameters: [EthereumAddress(bridgeSetupContractAddress),true], extraData: Data())
+        transaction?.data = contractData!
+
+        let formattedKey = privateKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        let dataKey = Data.fromHex(formattedKey)!
+        let keystore = try await EthereumKeystoreV3(privateKey: dataKey, password: "")
+        let keystoreManager = KeystoreManager([keystore!])
+        web3.addKeystoreManager(keystoreManager)
+
+        do {
+            try Web3Signer.signTX(transaction: &transaction!,
+                                  keystore: keystoreManager,
+                                  account: transaction!.from ?? transaction!.sender ?? EthereumAddress.contractDeploymentAddress(),
+                                  password: "")
+        } catch {
+            throw Web3Error.inputError(desc: "Failed to locally sign a transaction. \(error.localizedDescription)")
+        }
+
+        guard let transactionData = transaction!.encode(for: .transaction) else {
+            throw Web3Error.dataError
+        }
+
+        let response = try await web3.eth.send(raw: transactionData)
+        if(response.hash != nil){
+            result["transaction_hash"] = JSON(response.hash)
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "OK", "value": resultArray])
+        } else {
+            result["error"] = JSON("insufficient funds")
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        }
+        return resultData
+    } catch let error{
+        result["error"] = JSON(error.localizedDescription)
+        resultArray.arrayObject?.append(result)
+        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        return resultData
+    }
+}
+
+public func bridgeErc721Async( network: String,
+                               fromAddress: String,
+                               toNetwork: String,
+                               token_id: String,
+                               token_address: String,
+                               name: String,
+                               symbol: String,
+                               ownership: String) async throws -> JSON {
+    var resultArray: JSON = JSON([])
+    var resultData: JSON = JSON()
+    var result: JSON = JSON()
+    resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
+    do {
+        let accountInfo = try await getAccountInfoAsync(account: fromAddress)
+        var privateKey = ""
+        if(accountInfo["value"] != []){
+            let value = accountInfo["value"]
+            if value[0]["private"].string != nil {
+                privateKey = value[0]["private"].string!
+            }
+        }
+        let fromAddress = EthereumAddress(fromAddress)
+        networkSettings(network: network)
+        var url = try await URL(string:rpcUrl)
+        let web3 = try await Web3.new(url!)
+        let nonce = try await web3.eth.getTransactionCount(for: fromAddress!, onBlock: .pending)
+        let gasPriceEstimate = try await getEstimateGasAsync(network: network, tx_type: "baseFee")
+        var gasPrice: BigUInt? = nil
+        if let valueArray = gasPriceEstimate["value"].arrayObject as? [[String: Any]] {
+            if let gas = valueArray[0]["gas"] as? BigUInt {
+                gasPrice = gas
+            }
+        }
+        var txFee = BigUInt(0)
+        var networkHex = BigUInt(0)
+        if(toNetwork == "POLYGON") {
+            txFee = BigUInt(15000000000000000)
+            networkHex = BigUInt(0x504f4c59474f4e)
+        } else {
+            txFee = BigUInt(2000000000000000)
+            networkHex = BigUInt(0x4b4c4159544e)
+        }
+        let gasLimit = BigUInt(500000)
+        let data = "0x".data(using: .utf8)!
+        let contract = web3.contract(abiBridgeSetup, at: EthereumAddress(bridgeSetupContractAddress), abiVersion: 2)!
+        var transaction: CodableTransaction? = nil
+        if(network == "bnb" || network == "bnbTest") {
+            transaction = CodableTransaction(to:EthereumAddress(bridgeSetupContractAddress)!, nonce:nonce, chainID:chainID, gasLimit: gasLimit, gasPrice: gasPrice)
+        } else {
+            transaction = CodableTransaction(type:.eip1559, to:EthereumAddress(bridgeSetupContractAddress)!, nonce:nonce, chainID:chainID, value:txFee, gasLimit:gasLimit, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
+        }
+        transaction?.from = fromAddress
+        let contractData = contract.contract.method("setupFromERC721", parameters: [networkHex, name, symbol, EthereumAddress(ownership), EthereumAddress(token_address), BigUInt(token_id)], extraData: Data())
+        transaction?.data = contractData!
+        
+        let formattedKey = privateKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        let dataKey = Data.fromHex(formattedKey)!
+        let keystore = try await EthereumKeystoreV3(privateKey: dataKey, password: "")
+        let keystoreManager = KeystoreManager([keystore!])
+        web3.addKeystoreManager(keystoreManager)
+        
+        do {
+            try Web3Signer.signTX(transaction: &transaction!,
+                                  keystore: keystoreManager,
+                                  account: transaction!.from ?? transaction!.sender ?? EthereumAddress.contractDeploymentAddress(),
+                                  password: "")
+        } catch {
+            throw Web3Error.inputError(desc: "Failed to locally sign a transaction. \(error.localizedDescription)")
+        }
+        
+        guard let transactionData = transaction!.encode(for: .transaction) else {
+            throw Web3Error.dataError
+        }
+        
+        let response = try await web3.eth.send(raw: transactionData)
+        if(response.hash != nil){
+            result["transaction_hash"] = JSON(response.hash)
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "OK", "value": resultArray])
+        } else {
+            result["error"] = JSON("insufficient funds")
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        }
+        return resultData
+    } catch let error{
+        result["error"] = JSON(error.localizedDescription)
+        resultArray.arrayObject?.append(result)
+        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        return resultData
+    }
+}
+
+public func bridgeErc1155Async( network: String,
+                               fromAddress: String,
+                               toNetwork: String,
+                               token_id: String,
+                               token_address: String,
+                               name: String,
+                               symbol: String,
+                               ownership: String,
+                                amount: String) async throws -> JSON {
+    var resultArray: JSON = JSON([])
+    var resultData: JSON = JSON()
+    var result: JSON = JSON()
+    resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
+    do {
+        let accountInfo = try await getAccountInfoAsync(account: fromAddress)
+        var privateKey = ""
+        if(accountInfo["value"] != []){
+            let value = accountInfo["value"]
+            if value[0]["private"].string != nil {
+                privateKey = value[0]["private"].string!
+            }
+        }
+        let fromAddress = EthereumAddress(fromAddress)
+        networkSettings(network: network)
+        var url = try await URL(string:rpcUrl)
+        let web3 = try await Web3.new(url!)
+        let nonce = try await web3.eth.getTransactionCount(for: fromAddress!, onBlock: .pending)
+        let gasPriceEstimate = try await getEstimateGasAsync(network: network, tx_type: "baseFee")
+        var gasPrice: BigUInt? = nil
+        if let valueArray = gasPriceEstimate["value"].arrayObject as? [[String: Any]] {
+            if let gas = valueArray[0]["gas"] as? BigUInt {
+                gasPrice = gas
+            }
+        }
+        var txFee = BigUInt(0)
+        var networkHex = BigUInt(0)
+        if(toNetwork == "POLYGON") {
+            txFee = BigUInt(15000000000000000)
+            networkHex = BigUInt(0x504f4c59474f4e)
+        } else {
+            txFee = BigUInt(2000000000000000)
+            networkHex = BigUInt(0x4b4c4159544e)
+        }
+        let gasLimit = BigUInt(500000)
+        let data = "0x".data(using: .utf8)!
+        let contract = web3.contract(abiBridgeSetup, at: EthereumAddress(bridgeSetupContractAddress), abiVersion: 2)!
+        var transaction: CodableTransaction? = nil
+        if(network == "bnb" || network == "bnbTest") {
+            transaction = CodableTransaction(to:EthereumAddress(bridgeSetupContractAddress)!, nonce:nonce, chainID:chainID, gasLimit: gasLimit, gasPrice: gasPrice)
+        } else {
+            transaction = CodableTransaction(type:.eip1559, to:EthereumAddress(bridgeSetupContractAddress)!, nonce:nonce, chainID:chainID, value:txFee, gasLimit:gasLimit, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
+        }
+        transaction?.from = fromAddress
+        let contractData = contract.contract.method("setupFromERC1155", parameters: [networkHex, name, symbol, EthereumAddress(ownership), EthereumAddress(token_address), BigUInt(token_id), BigUInt(amount)], extraData: Data())
+        transaction?.data = contractData!
+        
+        let formattedKey = privateKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        let dataKey = Data.fromHex(formattedKey)!
+        let keystore = try await EthereumKeystoreV3(privateKey: dataKey, password: "")
+        let keystoreManager = KeystoreManager([keystore!])
+        web3.addKeystoreManager(keystoreManager)
+        
+        do {
+            try Web3Signer.signTX(transaction: &transaction!,
+                                  keystore: keystoreManager,
+                                  account: transaction!.from ?? transaction!.sender ?? EthereumAddress.contractDeploymentAddress(),
+                                  password: "")
+        } catch {
+            throw Web3Error.inputError(desc: "Failed to locally sign a transaction. \(error.localizedDescription)")
+        }
+        
+        guard let transactionData = transaction!.encode(for: .transaction) else {
+            throw Web3Error.dataError
+        }
+        
+        let response = try await web3.eth.send(raw: transactionData)
+        if(response.hash != nil){
+            result["transaction_hash"] = JSON(response.hash)
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "OK", "value": resultArray])
+        } else {
+            result["error"] = JSON("insufficient funds")
+            resultArray.arrayObject?.append(result)
+            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        }
+        return resultData
+    } catch let error{
+        result["error"] = JSON(error.localizedDescription)
+        resultArray.arrayObject?.append(result)
+        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        return resultData
+    }
+}
+
+
+
+public func verifyNFT(network: String, token_id: String, collection_id: String, api_key: String) async throws -> JSON {
     var resultArray: JSON = JSON([])
     var resultData: JSON = JSON()
     resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
@@ -2343,7 +2618,6 @@ public func chkNFTHolder(network: String, account: String, collection_id: String
             let contract = web3.contract(abiWrappedERC1155, at: ca)!
             let readOp = contract.createReadOperation("balanceOf",parameters: [owner,BigUInt(token_id!)])!
             let response = try await readOp.callContractMethod()
-            print(response)
             let balanceOf = response["0"] as! BigUInt
             if(balanceOf >= 1) {
                 result["result"] = JSON("OK")

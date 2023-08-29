@@ -120,7 +120,6 @@ public func restoreAccountAsync(network: [String]? = nil, privateKey: String? = 
             
             // storage save
             saveJsonData(jsonObject: changeJsonObject(useData: saveData), key: account)
-            print(loadJsonData(key: account)!)
             resultData = changeJsonObject(useData: ["result": "OK", "value": resultArray])
         }
     } else if let mnemonic = mnemonic {
@@ -176,7 +175,7 @@ public func restoreAccountAsync(network: [String]? = nil, privateKey: String? = 
 }
 
 // Get account info
-public func getAccountInfo(account: String) async throws -> JSON {
+public func getAccountInfoAsync(account: String) async throws -> JSON {
     var resultArray: JSON = JSON([])
     var resultData: JSON = JSON()
     resultData = changeJsonObject(useData:["result": "Fail", "value": resultArray])
@@ -341,6 +340,7 @@ public func getTokenInfoAsync(network: String, token_id: String) async throws ->
 
 // Get token info list async
 public func getTokenListAsync(network: String, owner: String, sort: String? = "DESC", limit: Int? = 0, page_number: Int? = 1) async throws -> JSON {
+    
     var resultArray: JSON = JSON([])
     var resultData: JSON = JSON()
     resultData = changeJsonObject(useData:["result": "Fail", "value": resultArray])
@@ -400,6 +400,11 @@ public func getTokenListAsync(network: String, owner: String, sort: String? = "D
             }
 
             try dbConnect().close()
+        } catch {
+            let jsonData = ["error" : "db connect error"]
+            resultArray.arrayObject?.append(jsonData)
+            resultData["result"] = "FAIL"
+            resultData["value"] = JSON(resultArray)
         }
         
         var sum: Int? = 0
@@ -563,7 +568,7 @@ public func signMessage(
     token_id: String,
     prefix: String) async throws -> String {
     
-    let accountInfo = try await getAccountInfo(account: fromAddress)
+    let accountInfo = try await getAccountInfoAsync(account: fromAddress)
     var privateKey = ""
     if(accountInfo["value"] != []){
         let value = accountInfo["value"]
@@ -600,7 +605,7 @@ public func getSignerAddressFromSignature(
     token_id: String,
     prefix: String) async throws -> String {
     
-    let accountInfo = try await getAccountInfo(account: fromAddress)
+    let accountInfo = try await getAccountInfoAsync(account: fromAddress)
     var privateKey = ""
     if(accountInfo["value"] != []){
         let value = accountInfo["value"]
