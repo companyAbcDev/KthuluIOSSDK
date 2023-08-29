@@ -344,10 +344,10 @@ public func bridgeCoinAsync(network: String, to_network: String, from : String, 
         var txFee = BigUInt(0)
         var networkHex = BigUInt(0)
         if(to_network == "POLYGON") {
-            txFee = BigUInt(200000000000)
+            txFee = BigUInt(2000000000000000)
             networkHex = BigUInt(0x504f4c59474f4e)
         } else {
-            txFee = BigUInt(200000000000)
+            txFee = BigUInt(2000000000000000)
             networkHex = BigUInt(0x4b4c4159544e)
         }
         
@@ -434,10 +434,10 @@ public func bridgeTokenAsync(network: String, to_network: String, from : String,
         var txFee = BigUInt(0)
         var networkHex = BigUInt(0)
         if(to_network == "POLYGON") {
-            txFee = BigUInt("30000000000000000000")
+            txFee = BigUInt(2000000000000000)
             networkHex = BigUInt(0x504f4c59474f4e)
         } else {
-            txFee = BigUInt("10000000000000000000")
+            txFee = BigUInt(2000000000000000)
             networkHex = BigUInt(0x4b4c4159544e)
         }
         

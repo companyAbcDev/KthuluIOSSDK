@@ -4,15 +4,15 @@
 import PackageDescription
 
 let package = Package(
-    name: "kthuluIOSSDK",
+    name: "kthuluSDK",
     platforms: [
       .iOS(.v15)
     ],
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.
         .library(
-            name: "kthuluIOSSDK",
-            targets: ["kthuluIOSSDK"]),
+            name: "kthuluSDK",
+            targets: ["kthuluSDK"]),
     ],
     dependencies: [
         // Dependencies declare other packages that this package depends on.
@@ -25,10 +25,10 @@ let package = Package(
         // Targets are the basic building blocks of a package. A target can define a module or a test suite.
         // Targets can depend on other targets in this package, and on products in packages this package depends on.
         .target(
-            name: "kthuluIOSSDK",
+            name: "kthuluSDK",
             dependencies: ["web3swift", "SwiftyJSON", "KeychainAccess"]),
         .testTarget(
-            name: "kthuluIOSSDKTests",
-            dependencies: ["kthuluIOSSDK"]),
+            name: "kthuluSDKTests",
+            dependencies: ["kthuluSDK"]),
     ]
 )
