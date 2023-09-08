@@ -382,15 +382,15 @@ public func getEstimateGasAsync(network: String, tx_type: String, token_address:
         case "baseFee":
             gasPrice = try await web3.eth.gasPrice()
         case "transferCoin":
-            if let to, let from, let amount {
-                let from = EthereumAddress(from)!
-                let to = EthereumAddress(to)!
+            if let toAddress = to, let fromAddress = from, let tokenAmount = amount {
+                let from = EthereumAddress(fromAddress)
+                let to = EthereumAddress(toAddress)
                 let data = "0x".data(using: .utf8)!
-                let nonce = try await web3.eth.getTransactionCount(for: from, onBlock: .pending)
-                guard let value = Utilities.parseToBigUInt(amount, decimals: 18) else {
+                let nonce = try await web3.eth.getTransactionCount(for: from!, onBlock: .pending)
+                guard let value = Utilities.parseToBigUInt(tokenAmount, decimals: 18) else {
                     throw Web3Error.inputError(desc: "Cannot parse inputted amount")
                 }
-                var transaction = CodableTransaction(to:to, nonce:nonce, chainID:chainID, value:value, data:data)
+                var transaction = CodableTransaction(to:to!, nonce:nonce, chainID:chainID, value:value, data:data)
                 let estimateGas = try await web3.eth.estimateGas(for: transaction)
                 gasPrice = estimateGas
             }
