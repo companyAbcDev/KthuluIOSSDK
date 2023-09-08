@@ -961,13 +961,13 @@ public func sendNFT721TransactionAsync(network: String, from: String, to: String
         } else {
             result["error"] = JSON("insufficient funds")
             resultArray.arrayObject?.append(result)
-            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+            resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         }
         return resultData
     } catch let error{
         result["error"] = JSON(error.localizedDescription)
         resultArray.arrayObject?.append(result)
-        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         return resultData
     }
 }
@@ -1054,13 +1054,13 @@ public func sendNFT1155TransactionAsync(network: String, from: String, to: Strin
         } else {
             result["error"] = JSON("insufficient funds")
             resultArray.arrayObject?.append(result)
-            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+            resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         }
         return resultData
     } catch let error{
         result["error"] = JSON(error.localizedDescription)
         resultArray.arrayObject?.append(result)
-        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         return resultData
     }
 }
@@ -1141,13 +1141,13 @@ public func sendErc721BatchAsync(network: String, from: String, to: String, toke
         } else {
             result["error"] = JSON("insufficient funds")
             resultArray.arrayObject?.append(result)
-            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+            resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         }
         return resultData
     } catch let error{
         result["error"] = JSON(error.localizedDescription)
         resultArray.arrayObject?.append(result)
-        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         return resultData
     }
 }
@@ -1233,13 +1233,13 @@ public func sendErc1155BatchAsync(network: String, from: String, to: String, tok
         } else {
             result["error"] = JSON("insufficient funds")
             resultArray.arrayObject?.append(result)
-            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+            resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         }
         return resultData
     } catch let error{
         result["error"] = JSON(error.localizedDescription)
         resultArray.arrayObject?.append(result)
-        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         return resultData
     }
 }
@@ -1326,13 +1326,13 @@ public func deployErc721Async(network: String, from: String, name: String, symbo
         } else {
             result["error"] = JSON("insufficient funds")
             resultArray.arrayObject?.append(result)
-            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+            resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         }
         return resultData
     } catch let error{
         result["error"] = JSON(error.localizedDescription)
         resultArray.arrayObject?.append(result)
-        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         return resultData
     }
 }
@@ -1419,13 +1419,13 @@ public func deployErc1155Async(network: String, from: String, name: String, symb
         } else {
             result["error"] = JSON("insufficient funds")
             resultArray.arrayObject?.append(result)
-            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+            resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         }
         return resultData
     } catch let error{
         result["error"] = JSON(error.localizedDescription)
         resultArray.arrayObject?.append(result)
-        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         return resultData
     }
 }
@@ -1514,13 +1514,13 @@ public func mintErc721Async(network: String, from: String, to: String, token_uri
         } else {
             result["error"] = JSON("insufficient funds")
             resultArray.arrayObject?.append(result)
-            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+            resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         }
         return resultData
     } catch let error{
         result["error"] = JSON(error.localizedDescription)
         resultArray.arrayObject?.append(result)
-        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         return resultData
     }
 }
@@ -1609,13 +1609,13 @@ public func mintErc1155Async(network: String, from: String, to: String, token_ur
         } else {
             result["error"] = JSON("insufficient funds")
             resultArray.arrayObject?.append(result)
-            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+            resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         }
         return resultData
     } catch let error{
         result["error"] = JSON(error.localizedDescription)
         resultArray.arrayObject?.append(result)
-        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         return resultData
     }
 }
@@ -1697,13 +1697,13 @@ public func batchMintErc721Async(network: String, from: String, to: String, star
         } else {
             result["error"] = JSON("insufficient funds")
             resultArray.arrayObject?.append(result)
-            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+            resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         }
         return resultData
     } catch let error{
         result["error"] = JSON(error.localizedDescription)
         resultArray.arrayObject?.append(result)
-        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         return resultData
     }
 }
@@ -1785,13 +1785,13 @@ public func batchMintErc1155Async(network: String, from: String, to: String, tok
         } else {
             result["error"] = JSON("insufficient funds")
             resultArray.arrayObject?.append(result)
-            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+            resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         }
         return resultData
     } catch let error{
         result["error"] = JSON(error.localizedDescription)
         resultArray.arrayObject?.append(result)
-        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         return resultData
     }
 }
@@ -1875,13 +1875,13 @@ public func burnErc721Async(network: String, owner: String, token_id: String, co
         } else {
             result["error"] = JSON("insufficient funds")
             resultArray.arrayObject?.append(result)
-            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+            resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         }
         return resultData
     } catch let error{
         result["error"] = JSON(error.localizedDescription)
         resultArray.arrayObject?.append(result)
-        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         return resultData
     }
 }
@@ -1965,13 +1965,13 @@ public func burnErc1155Async(network: String, owner: String, token_id: String, c
         } else {
             result["error"] = JSON("insufficient funds")
             resultArray.arrayObject?.append(result)
-            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+            resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         }
         return resultData
     } catch let error{
         result["error"] = JSON(error.localizedDescription)
         resultArray.arrayObject?.append(result)
-        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         return resultData
     }
 }
@@ -2052,20 +2052,20 @@ public func approveSetupNftAsync(network: String, from: String, collection_id: S
         } else {
             result["error"] = JSON("insufficient funds")
             resultArray.arrayObject?.append(result)
-            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+            resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         }
         return resultData
     } catch let error{
         result["error"] = JSON(error.localizedDescription)
         resultArray.arrayObject?.append(result)
-        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         return resultData
     }
 }
 
 public func bridgeErc721Async( network: String,
                                fromAddress: String,
-                               toNetwork: String,
+                               to_network: String,
                                token_id: String,
                                token_address: String,
                                name: String,
@@ -2096,26 +2096,61 @@ public func bridgeErc721Async( network: String,
                 gasPrice = BigUInt(gas)
             }
         }
-        var txFee = BigUInt(0)
-        var networkHex = BigUInt(0)
-        if(toNetwork == "POLYGON") {
-            txFee = BigUInt(5000000000000000)
-            networkHex = BigUInt(0x504f4c59474f4e)
-        } else {
-            txFee = BigUInt(5000000000000000)
-            networkHex = BigUInt(0x4b4c4159544e)
+        
+        var to_network = to_network;
+        switch to_network {
+            case "ethereum":
+                to_network = "ETHEREUM"
+            case "cypress":
+                to_network = "KLAYTN"
+            case "polygon":
+                to_network = "POLYGON"
+            case "bnb":
+                to_network = "BNBMAIN"
+            default:
+                to_network = ""
         }
+        
+        let networkHex = try await textToHex(to_network)
+        
+        var nhData = try await getNodeHomeAsync(network: network, to_network: to_network, token_address: token_address)
+        
+        var type = "";
+        if let valueArray = nhData["value"].arrayObject as? [[String: Any]], let nhString = valueArray.first?["type"] as? String {
+            type = nhString
+        }
+        
+        var txFee: BigUInt?
+        
+        var txFeeData = try await getNetworkFeeAsync(network: network, to_network: to_network, fee_type: type)
+        if let valueArray = txFeeData["value"].arrayObject as? [[String: Any]], let txFeeString = valueArray.first?["networkFee"] as? String {
+            txFee = BigUInt(txFeeString)
+        }
+        
         let gasLimit = BigUInt(500000)
         let data = "0x".data(using: .utf8)!
-        let contract = web3.contract(abiBridgeSetup, at: EthereumAddress(bridgeSetupContractAddress), abiVersion: 2)!
+        
         var transaction: CodableTransaction? = nil
-        if(network == "bnb" || network == "bnbTest") {
-            transaction = CodableTransaction(to:EthereumAddress(bridgeSetupContractAddress)!, nonce:nonce, chainID:chainID, gasLimit: gasLimit, gasPrice: gasPrice)
+        
+        var contractData : Data?
+        var toContractAddress = "";
+        var contract : Web3.Contract?
+        if(type == "setup") {
+            contract = web3.contract(abiBridgeSetup, at: EthereumAddress(bridgeSetupContractAddress), abiVersion: 2)!
+            contractData = contract!.contract.method("setupFromERC721", parameters: [networkHex, name, symbol, EthereumAddress(ownership), EthereumAddress(token_address), BigUInt(token_id)], extraData: Data())
+            toContractAddress = bridgeSetupContractAddress
         } else {
-            transaction = CodableTransaction(type:.eip1559, to:EthereumAddress(bridgeSetupContractAddress)!, nonce:nonce, chainID:chainID, value:txFee, gasLimit:gasLimit, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
+            contract = web3.contract(abiTransferNFT, at: EthereumAddress(nftTransferContractAddress), abiVersion: 2)!
+            contractData = contract!.contract.method("moveFromERC721", parameters: [networkHex, EthereumAddress(token_address), BigUInt(token_id)], extraData: Data())
+            toContractAddress = nftTransferContractAddress
+        }
+        
+        if(network == "bnb" || network == "tbnb") {
+            transaction = CodableTransaction(to:EthereumAddress(toContractAddress)!, nonce:nonce, chainID:chainID, value:txFee!, gasLimit: gasLimit, gasPrice: gasPrice)
+        } else {
+            transaction = CodableTransaction(type:.eip1559, to:EthereumAddress(toContractAddress)!, nonce:nonce, chainID:chainID, value:txFee!, gasLimit:gasLimit, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
         }
         transaction?.from = fromAddress
-        let contractData = contract.contract.method("setupFromERC721", parameters: [networkHex, name, symbol, EthereumAddress(ownership), EthereumAddress(token_address), BigUInt(token_id)], extraData: Data())
         transaction?.data = contractData!
         
         let formattedKey = privateKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -2145,20 +2180,20 @@ public func bridgeErc721Async( network: String,
         } else {
             result["error"] = JSON("insufficient funds")
             resultArray.arrayObject?.append(result)
-            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+            resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         }
         return resultData
     } catch let error{
         result["error"] = JSON(error.localizedDescription)
         resultArray.arrayObject?.append(result)
-        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         return resultData
     }
 }
 
 public func bridgeErc1155Async( network: String,
                                fromAddress: String,
-                               toNetwork: String,
+                               to_network: String,
                                token_id: String,
                                token_address: String,
                                name: String,
@@ -2190,26 +2225,61 @@ public func bridgeErc1155Async( network: String,
                 gasPrice = BigUInt(gas)
             }
         }
-        var txFee = BigUInt(0)
-        var networkHex = BigUInt(0)
-        if(toNetwork == "POLYGON") {
-            txFee = BigUInt(5000000000000000)
-            networkHex = BigUInt(0x504f4c59474f4e)
-        } else {
-            txFee = BigUInt(5000000000000000)
-            networkHex = BigUInt(0x4b4c4159544e)
+        
+        var to_network = to_network;
+        switch to_network {
+            case "ethereum":
+                to_network = "ETHEREUM"
+            case "cypress":
+                to_network = "KLAYTN"
+            case "polygon":
+                to_network = "POLYGON"
+            case "bnb":
+                to_network = "BNBMAIN"
+            default:
+                to_network = ""
         }
+        
+        let networkHex = try await textToHex(to_network)
+        
+        var nhData = try await getNodeHomeAsync(network: network, to_network: to_network, token_address: token_address)
+        
+        var type = "";
+        if let valueArray = nhData["value"].arrayObject as? [[String: Any]], let nhString = valueArray.first?["type"] as? String {
+            type = nhString
+        }
+        
+        var txFee: BigUInt?
+        
+        var txFeeData = try await getNetworkFeeAsync(network: network, to_network: to_network, fee_type: type)
+        if let valueArray = txFeeData["value"].arrayObject as? [[String: Any]], let txFeeString = valueArray.first?["networkFee"] as? String {
+            txFee = BigUInt(txFeeString)
+        }
+        
         let gasLimit = BigUInt(500000)
         let data = "0x".data(using: .utf8)!
-        let contract = web3.contract(abiBridgeSetup, at: EthereumAddress(bridgeSetupContractAddress), abiVersion: 2)!
+        
         var transaction: CodableTransaction? = nil
-        if(network == "bnb" || network == "bnbTest") {
-            transaction = CodableTransaction(to:EthereumAddress(bridgeSetupContractAddress)!, nonce:nonce, chainID:chainID, gasLimit: gasLimit, gasPrice: gasPrice)
+        
+        var contractData : Data?
+        var toContractAddress = "";
+        var contract : Web3.Contract?
+        if(type == "setup") {
+            contract = web3.contract(abiBridgeSetup, at: EthereumAddress(bridgeSetupContractAddress), abiVersion: 2)!
+            contractData = contract!.contract.method("setupFromERC1155", parameters: [networkHex, name, symbol, EthereumAddress(ownership), EthereumAddress(token_address), BigUInt(token_id), BigUInt(amount)], extraData: Data())
+            toContractAddress = bridgeSetupContractAddress
         } else {
-            transaction = CodableTransaction(type:.eip1559, to:EthereumAddress(bridgeSetupContractAddress)!, nonce:nonce, chainID:chainID, value:txFee, gasLimit:gasLimit, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
+            contract = web3.contract(abiTransferNFT, at: EthereumAddress(nftTransferContractAddress), abiVersion: 2)!
+            contractData = contract!.contract.method("moveFromERC1155", parameters: [networkHex, EthereumAddress(token_address), BigUInt(token_id), BigUInt(amount)], extraData: Data())
+            toContractAddress = nftTransferContractAddress
+        }
+        
+        if(network == "bnb" || network == "tbnb") {
+            transaction = CodableTransaction(to:EthereumAddress(toContractAddress)!, nonce:nonce, chainID:chainID, value:txFee!, gasLimit: gasLimit, gasPrice: gasPrice)
+        } else {
+            transaction = CodableTransaction(type:.eip1559, to:EthereumAddress(toContractAddress)!, nonce:nonce, chainID:chainID, value:txFee!, gasLimit:gasLimit, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
         }
         transaction?.from = fromAddress
-        let contractData = contract.contract.method("setupFromERC1155", parameters: [networkHex, name, symbol, EthereumAddress(ownership), EthereumAddress(token_address), BigUInt(token_id), BigUInt(amount)], extraData: Data())
         transaction?.data = contractData!
         
         let formattedKey = privateKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -2239,13 +2309,13 @@ public func bridgeErc1155Async( network: String,
         } else {
             result["error"] = JSON("insufficient funds")
             resultArray.arrayObject?.append(result)
-            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+            resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         }
         return resultData
     } catch let error{
         result["error"] = JSON(error.localizedDescription)
         resultArray.arrayObject?.append(result)
-        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         return resultData
     }
 }
@@ -2289,7 +2359,7 @@ public func verifyNFT(network: String, token_id: String, collection_id: String, 
         } catch let error{
             result["error"] = JSON(error.localizedDescription)
             resultArray.arrayObject?.append(result)
-            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+            resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
             return resultData
         }
 
@@ -2308,7 +2378,7 @@ public func verifyNFT(network: String, token_id: String, collection_id: String, 
             result = [:]
             result["error"] = JSON("DB info NULL")
             resultArray.arrayObject?.append(result)
-            resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+            resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
             return resultData
         }
 

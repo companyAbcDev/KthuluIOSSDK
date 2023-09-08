@@ -60,7 +60,7 @@ public func sendTransactionAsync(network: String, from: String, to: String, amou
         if(network == "bnb" || network == "bnbTest") {
             transaction = CodableTransaction(to:toAddress, nonce:nonce, chainID:chainID, value:value, data:data, gasLimit: gasLimit!, gasPrice: gasPrice)
         } else {
-            transaction = CodableTransaction(type:.eip1559, to:toAddress, nonce:nonce, chainID:chainID, value:value, data:data, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: 33000000000)
+            transaction = CodableTransaction(type:.eip1559, to:toAddress, nonce:nonce, chainID:chainID, value:value, data:data, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
         }
         transaction?.from = fromAddress
         
@@ -162,7 +162,7 @@ public func sendTokenTransactionAsync(network: String, from: String, to: String,
         if(network == "bnb" || network == "bnbTest") {
             transaction = CodableTransaction(to:token_id, nonce:nonce, chainID:chainID, gasLimit: gasLimit!, gasPrice: gasPrice)
         } else {
-            transaction = CodableTransaction(type:.eip1559, to:token_id, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: 33000000000)
+            transaction = CodableTransaction(type:.eip1559, to:token_id, nonce:nonce, chainID:chainID, gasLimit:gasLimit!, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
         }
         transaction?.from = fromAddress
         transaction?.data = contractData!
@@ -341,23 +341,29 @@ public func bridgeCoinAsync(network: String, to_network: String, from : String, 
             throw Web3Error.inputError(desc: "Cannot parse inputted amount")
         }
         
-        var txFee = BigUInt(0)
-        var networkHex = BigUInt(0)
-        if(to_network == "POLYGON") {
-            txFee = BigUInt(2000000000000000)
-            networkHex = BigUInt(0x504f4c59474f4e)
-        } else {
-            txFee = BigUInt(2000000000000000)
-            networkHex = BigUInt(0x4b4c4159544e)
+        var to_network = to_network;
+        switch to_network {
+            case "ethereum":
+                to_network = "ETHEREUM"
+            case "cypress":
+                to_network = "KLAYTN"
+            case "polygon":
+                to_network = "POLYGON"
+            case "bnb":
+                to_network = "BNBMAIN"
+            default:
+                to_network = ""
         }
         
+        let networkHex = try await textToHex(to_network)
+        
         if(network == "bnb" || network == "tbnb") {
-            transaction = CodableTransaction(to:bridgeContractAddress!, nonce:nonce, chainID:chainID, value:txFee, gasLimit: gasLimit, gasPrice: gasPrice)
+            transaction = CodableTransaction(to:bridgeContractAddress!, nonce:nonce, chainID:chainID, value:value, gasLimit: gasLimit, gasPrice: gasPrice)
         } else {
-            transaction = CodableTransaction(type:.eip1559, to:bridgeContractAddress!, nonce:nonce, chainID:chainID, value:txFee, gasLimit:gasLimit, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
+            transaction = CodableTransaction(type:.eip1559, to:bridgeContractAddress!, nonce:nonce, chainID:chainID, value:value, gasLimit:gasLimit, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
         }
         transaction?.from = from
-        let contractData = contract.contract.method("moveFromETHER", parameters: [BigUInt(networkHex)], extraData: Data())
+        let contractData = contract.contract.method("moveFromETHER", parameters: [networkHex], extraData: Data())
         transaction?.data = contractData!
         
         let formattedKey = privateKey.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -390,7 +396,7 @@ public func bridgeCoinAsync(network: String, to_network: String, from : String, 
     }
 }
 
-public func bridgeTokenAsync(network: String, to_network: String, from : String,token_id : String, amount : String) async throws -> JSON {
+public func bridgeTokenAsync(network: String, to_network: String, from : String, amount : String) async throws -> JSON {
     var resultArray: JSON = JSON([])
     var resultData: JSON = JSON()
     var result: JSON = JSON()
@@ -407,6 +413,35 @@ public func bridgeTokenAsync(network: String, to_network: String, from : String,
                 privateKey = value[0]["private"].string!
             }
         }
+        
+        let tokenAddresses: [String: [String: String]] = [
+            "ethereum": [
+                "cypress": "0x39AAB030b052350A79ca9cB1F8992230288C512b",
+                "polygon": "0xdF9c65B589e1286D4361EcFFa516e1fbfA4526df",
+                "bnb": "0xcd9f176125b244cf5e9ca537d4fbbd62f7cec402"
+            ],
+            "cypress": [
+                "ethereum": "0x8d868082C214a23aA31E1862FF183426A3a81c07",
+                "polygon": "0x085AB24e511bEa905bDe815FA38a11eEB507E206",
+                "bnb": "0x655108c33bbe4e1dee19b15c2fee5a2cf73eea64"
+            ],
+            "polygon": [
+                "ethereum": "0x8f663C94A255835DA908D52657d83B071E59D96a",
+                "cypress": "0x4F92e336aF5129bA4cD6d8cFE5272dc45B61cb06",
+                "bnb": "0x8216acee6664c9ba1d340f48041931ddc3e800db"
+            ],
+            "bnb": [
+                "ethereum": "0x4354453f99bB208ab0a2e8774F929D7DC282A0f7",
+                "cypress": "0x909CCb87D6Ee34742A89AD1f60c171007B46d7dB",
+                "polygon": "0x60398bD8F17d3866fB6dE9545D3168CECA5d9a0c"
+            ]
+        ]
+
+        guard let tokenAddress = tokenAddresses[network]?[to_network] else {
+            throw NSError(domain: "Invalid main network type", code: 1, userInfo: nil)
+        }
+        
+        
         let from = EthereumAddress(from)
         let bridgeContractAddress = EthereumAddress(bridgeContractAddress)
         networkSettings(network: network)
@@ -431,23 +466,36 @@ public func bridgeTokenAsync(network: String, to_network: String, from : String,
             throw Web3Error.inputError(desc: "Cannot parse inputted amount")
         }
         
-        var txFee = BigUInt(0)
-        var networkHex = BigUInt(0)
-        if(to_network == "POLYGON") {
-            txFee = BigUInt(2000000000000000)
-            networkHex = BigUInt(0x504f4c59474f4e)
-        } else {
-            txFee = BigUInt(2000000000000000)
-            networkHex = BigUInt(0x4b4c4159544e)
+        var to_network = to_network;
+        switch to_network {
+            case "ethereum":
+                to_network = "ETHEREUM"
+            case "cypress":
+                to_network = "KLAYTN"
+            case "polygon":
+                to_network = "POLYGON"
+            case "bnb":
+                to_network = "BNBMAIN"
+            default:
+                to_network = ""
+        }
+        
+        let networkHex = try await textToHex(to_network)
+        
+        var txFeeData = try await getNetworkFeeAsync(network: network, to_network: to_network, fee_type: "token")
+                
+        var txFee: BigUInt?
+        if let valueArray = txFeeData["value"].arrayObject as? [[String: Any]], let txFeeString = valueArray.first?["networkFee"] as? String {
+            txFee = BigUInt(txFeeString)
         }
         
         if(network == "bnb" || network == "tbnb") {
-            transaction = CodableTransaction(to:bridgeContractAddress!, nonce:nonce, chainID:chainID, value:txFee, gasLimit: gasLimit, gasPrice: gasPrice)
+            transaction = CodableTransaction(to:bridgeContractAddress!, nonce:nonce, chainID:chainID, value:txFee!, gasLimit: gasLimit, gasPrice: gasPrice)
         } else {
-            transaction = CodableTransaction(type:.eip1559, to:bridgeContractAddress!, nonce:nonce, chainID:chainID, value:txFee, gasLimit:gasLimit, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
+            transaction = CodableTransaction(type:.eip1559, to:bridgeContractAddress!, nonce:nonce, chainID:chainID, value:txFee!, gasLimit:gasLimit, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
         }
         transaction?.from = from
-        let contractData = contract.contract.method("moveFromERC20", parameters: [BigUInt(networkHex), Address(token_id), BigUInt(value)], extraData: Data())
+        let contractData = contract.contract.method("moveFromERC20", parameters: [networkHex, Address(tokenAddress), BigUInt(value)], extraData: Data())
         transaction?.data = contractData!
         
         let formattedKey = privateKey.trimmingCharacters(in: .whitespacesAndNewlines)

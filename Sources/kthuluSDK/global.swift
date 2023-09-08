@@ -341,28 +341,102 @@ public func changeJsonObject(useData: [String: Any]) -> JSON {
     return jsonDictionary
 }
 
-public func getNetworkFee(network: String, to_network: String, fee_type: String) async throws -> JSON {
+public func getNetworkFeeAsync(network: String, to_network: String, fee_type: String) async throws -> JSON {
     var resultArray: JSON = JSON([])
     var resultData: JSON = JSON()
     var result: JSON = JSON()
     resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
+
     do {
         networkSettings(network: network)
-        var url = try await URL(string:rpcUrl)
-        let web3 = try await Web3.new(url!)
-        let a = EthereumAddress(from: bridgeConfigContractAddress)
-        let contract = web3.contract(abiBridgeConfig, at: a)!
-        let toNetworkHex = textToHex(to_network)!
-        let readOp = try await contract.createReadOperation("getNetworkFeeIdxByName", parameters: [BigUInt(toNetworkHex)])!.callContractMethod()
-        print(readOp["0"])
-        let b: BigUInt? = readOp["0"] as! BigUInt
-        let readOp2 = try await contract.createReadOperation("getNetworkFeeByIdx", parameters: [b])!.callContractMethod()
-        print(readOp2["0"])
-    } catch let error{
+        let web3 = try await Web3.new(URL(string: rpcUrl)!)
         
+        let contractAddress = EthereumAddress(from: bridgeConfigContractAddress)
+        let contract = web3.contract(abiBridgeConfig, at: contractAddress)!
+        
+        let toNetworkHex = textToHex(to_network)!
+        
+        let readOp = try await contract.createReadOperation("getNetworkFeeIdxByName", parameters: [BigUInt(toNetworkHex)])!.callContractMethod()
+        
+        let networkFeeIdx = readOp["0"] as? BigUInt
+        
+        let readOp2 = try await contract.createReadOperation("getNetworkFeeByIdx", parameters: [networkFeeIdx])!.callContractMethod()
+        
+        let feesArray = readOp2["0"] as? [BigUInt]
+        
+        // Extract the fees (assuming they're stored in the same order as in the Kotlin code)
+        let tokenFee = feesArray![1]
+        let nftFee = feesArray![2]
+        let regFee = feesArray![3]
+        var resultFee: BigUInt
+
+        switch fee_type {
+            case "nft":
+                resultFee = nftFee
+            case "token":
+                resultFee = tokenFee
+            case "setup":
+                resultFee = regFee
+            default:
+                resultFee = 0
+        }
+        
+        result["networkFee"] = JSON(String(resultFee))
+        resultArray.arrayObject?.append(result)
+        resultData = changeJsonObject(useData:["result": "OK", "value": resultArray])
+    } catch let error {
+        result["error"] = JSON(error.localizedDescription)
+        resultArray.arrayObject?.append(result)
+        resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
+        return resultData
     }
+
     return resultData
 }
+
+public func getNodeHomeAsync(network: String, to_network: String, token_address: String) async throws -> JSON {
+    var resultArray: JSON = JSON([])
+    var resultData: JSON = JSON()
+    var result: JSON = JSON()
+    resultData = changeJsonObject(useData: ["result": "FAIL", "value": resultArray])
+
+    do {
+        networkSettings(network: network)
+        let web3 = try await Web3.new(URL(string: rpcUrl)!)
+
+        let contractAddress = EthereumAddress(from: bridgeConfigContractAddress)
+        let contract = web3.contract(abiBridgeConfig, at: contractAddress)!
+
+        let toNetworkHex = textToHex(to_network)!
+
+        let customNhidOp = try await contract.createReadOperation("customNhid", parameters: [EthereumAddress(token_address)])!.callContractMethod()
+
+        let customNhid = customNhidOp["0"] as? BigUInt
+
+        if customNhid != BigUInt(0) {
+            let getTokNetworkOp = try await contract.createReadOperation("getToNetwork", parameters: [EthereumAddress(token_address), BigUInt(toNetworkHex)])!.callContractMethod()
+            
+            let getTokNetworkArray = getTokNetworkOp["0"] as? [Any]
+            let getTokNetwork = getTokNetworkArray?.first as? BigUInt
+
+            result["type"] = getTokNetwork != BigUInt(0) ? JSON("nft") : JSON("setup")
+        } else {
+            result["type"] = JSON("setup")
+        }
+
+        resultArray.arrayObject?.append(result)
+        resultData = changeJsonObject(useData: ["result": "OK", "value": resultArray])
+
+    } catch let error {
+        result["error"] = JSON(error.localizedDescription)
+        resultArray.arrayObject?.append(result)
+        resultData = changeJsonObject(useData: ["result": "FAIL", "error": resultArray])
+        return resultData
+    }
+
+    return resultData
+}
+
 
 // get Gas Price
 public func getEstimateGasAsync(network: String, tx_type: String, token_address: String? = nil, from: String? = nil, to: String? = nil, amount: String? = nil, token_id: String? = nil, to_token_address: String? = nil, to_network: String? = nil, batch_token_id: [String]? = nil, batch_token_amount: [String]? = nil, name: String? = nil, symbol: String? = nil, base_uri: String? = nil, uri_type: String? = nil, token_uri: String? = nil, batch_token_uri: [String]? = nil, start_id: String? = nil, end_id: String? = nil) async throws -> JSON {
@@ -382,15 +456,16 @@ public func getEstimateGasAsync(network: String, tx_type: String, token_address:
         case "baseFee":
             gasPrice = try await web3.eth.gasPrice()
         case "transferCoin":
-            if let toAddress = to, let fromAddress = from, let tokenAmount = amount {
-                let from = EthereumAddress(fromAddress)!
-                let to = EthereumAddress(toAddress)!
+            if (to != nil && from != nil && amount != nil) {
+                var from = EthereumAddress(from!)!
+                var to = EthereumAddress(to!)!
                 let data = "0x".data(using: .utf8)!
                 let nonce = try await web3.eth.getTransactionCount(for: from, onBlock: .pending)
-                guard let value = Utilities.parseToBigUInt(tokenAmount, decimals: 18) else {
+                guard let value = Utilities.parseToBigUInt(amount!, decimals: 18) else {
                     throw Web3Error.inputError(desc: "Cannot parse inputted amount")
                 }
-                var transaction = CodableTransaction(to:to, nonce:nonce, chainID:chainID, value:value, data:data)
+                var transaction = CodableTransaction(type: .eip1559, to: to, chainID: chainID, data: data)
+                transaction.from = from
                 let estimateGas = try await web3.eth.estimateGas(for: transaction)
                 gasPrice = estimateGas
             }
@@ -606,21 +681,7 @@ public func getEstimateGasAsync(network: String, tx_type: String, token_address:
     }
 }
 
-public func textToHex(_ text: String) -> UInt64? {
-    if text.isEmpty {
-        return nil
-    }
-    
-    var hexString = "0x"
-    
-    for char in text {
-        let s = String(char.unicodeScalars.first!.value, radix: 16)
-        hexString += String(repeating: "0", count: 2 - s.count) + s
-    }
-    
-    if let decimalNumber = UInt64(hexString.dropFirst(2), radix: 16) {
-        return decimalNumber
-    } else {
-        return nil
-    }
+public func textToHex(_ text: String) -> BigUInt? {
+    let hexString = text.utf8.map { String(format: "%02X", $0) }.joined()
+    return BigUInt(hexString, radix: 16)
 }
