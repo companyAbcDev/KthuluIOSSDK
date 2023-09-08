@@ -354,7 +354,7 @@ public func bridgeCoinAsync(network: String, to_network: String, from : String, 
         if(network == "bnb" || network == "tbnb") {
             transaction = CodableTransaction(to:bridgeContractAddress!, nonce:nonce, chainID:chainID, value:txFee, gasLimit: gasLimit, gasPrice: gasPrice)
         } else {
-            transaction = CodableTransaction(type:.eip1559, to:bridgeContractAddress!, nonce:nonce, chainID:chainID, value:value, gasLimit:gasLimit, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
+            transaction = CodableTransaction(type:.eip1559, to:bridgeContractAddress!, nonce:nonce, chainID:chainID, value:txFee, gasLimit:gasLimit, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
         }
         transaction?.from = from
         let contractData = contract.contract.method("moveFromETHER", parameters: [BigUInt(networkHex)], extraData: Data())
@@ -705,7 +705,7 @@ public func coinForTokenswapAsync(
                 
                 var transaction: CodableTransaction? = nil
                 if(network == "bnb" || network == "tbnb") {
-                    transaction = CodableTransaction(to:uniswapV2RouterAddress!, nonce:nonce, chainID:chainID, gasLimit: 200000, gasPrice: gasPrice)
+                    transaction = CodableTransaction(to:uniswapV2RouterAddress!, nonce:nonce, chainID:chainID, value:BigUInt(amountInWei), gasLimit: 200000, gasPrice: gasPrice)
                 } else {
                     // tip 0.1gwei
                     transaction = CodableTransaction(type:.eip1559, to:uniswapV2RouterAddress!, nonce:nonce, chainID:chainID, value:BigUInt(amountInWei), gasLimit: gasLimit, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))

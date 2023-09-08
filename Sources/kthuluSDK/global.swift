@@ -23,16 +23,10 @@ public func KthuluSdkVersion(){
     print(changeJsonObject(useData: ["result": "OK", "value":  [changeJsonObject(useData: version)]]))
 }
 
-//public var addrTransferGoerli = "0x25df7c4d54ce69faf37352cbe98e2d3f9281eaf7"
-//public var addrBridgeGoerli = "0x25df7c4d54ce69faf37352cbe98e2d3f9281eaf7"
-//public var erc20DeployGoerli = "0xc11735Ce3c155E755bC9839A5B5d06dEa0482306"
-//public var erc20DeployMumbai = "0x95f34cD3FE7ca6273f7EaFcA35E65A36aa8894cC"
-//public var erc20DeployPolygon = "0x96856126a6bb4870cDD3e179004CD18cEf569044"
-
-var dbServer: String? = nil
-var dbUser: String? = nil
-var dbPasswd: String? = nil
-var dbName: String? = nil
+var dbServer: String? = "210.207.161.10"
+var dbUser: String? = "kthuluUser"
+var dbPasswd: String? = "kthuluUserPw"
+var dbName: String? = "kthulu"
 
 public func dbSetting(server: String, user: String, passwd: String, name: String){
     dbServer = server
@@ -41,6 +35,11 @@ public func dbSetting(server: String, user: String, passwd: String, name: String
     dbName = name
 }
 
+//public var addrTransferGoerli = "0x25df7c4d54ce69faf37352cbe98e2d3f9281eaf7"
+//public var addrBridgeGoerli = "0x25df7c4d54ce69faf37352cbe98e2d3f9281eaf7"
+//public var erc20DeployGoerli = "0xc11735Ce3c155E755bC9839A5B5d06dEa0482306"
+//public var erc20DeployMumbai = "0x95f34cD3FE7ca6273f7EaFcA35E65A36aa8894cC"
+//public var erc20DeployPolygon = "0x96856126a6bb4870cDD3e179004CD18cEf569044"
 
 var chainID = BigUInt(0);
 var rpcUrl: String = ""
@@ -56,7 +55,7 @@ func networkSettings(network: String) {
     switch network {
     case "ethereum":
         chainID = BigUInt(1)
-        rpcUrl = "http://210.207.161.11:8545"
+        rpcUrl = "https://mainnet.infura.io/v3/02c509fda7da4fed882ac537046cfd66"
         maxPriorityFeePerGas = "2000000000"
         bridgeConfigContractAddress = "0xf643a4fb01cbbfb561cc906c1f37d5718ef3bba3"
         bridgeContractAddress = "0x7362fa30ada8ccf2130017f2a8f0b6be78aa38de"
@@ -67,7 +66,7 @@ func networkSettings(network: String) {
         
     case "cypress":
         chainID = BigUInt(8217)
-        rpcUrl = "http://210.207.161.12:8551"
+        rpcUrl = "https://rpc.ankr.com/klaytn"
         maxPriorityFeePerGas = "0"
         bridgeConfigContractAddress = "0x33fcf21e795447cc1668ef2ca06dbf78eb180763"
         bridgeContractAddress = "0xb7e2b748364c7d38311444a62a57d76dd697e99b"
@@ -78,7 +77,7 @@ func networkSettings(network: String) {
         
     case "polygon":
         chainID = BigUInt(137)
-        rpcUrl = "http://210.207.161.13:8545"
+        rpcUrl = "https://rpc-mainnet.maticvigil.com/v1/96ab7849c9d3f105416383dd284c3f7e6511208c"
         maxPriorityFeePerGas = "50000000000"
         bridgeConfigContractAddress = "0xf643a4fb01cbbfb561cc906c1f37d5718ef3bba3"
         bridgeContractAddress = "0x7362fa30ada8ccf2130017f2a8f0b6be78aa38de"
@@ -89,12 +88,14 @@ func networkSettings(network: String) {
 
     case "bnb":
         chainID = BigUInt(56)
-        rpcUrl = "http://210.207.161.24:8545"
+        rpcUrl = "https://bsc-dataseed.binance.org"
         maxPriorityFeePerGas = "0"
-        bridgeConfigContractAddress = ""
-        bridgeContractAddress = ""
+        bridgeConfigContractAddress = "0xf643a4fb01cbbfb561cc906c1f37d5718ef3bba3"
+        bridgeContractAddress = "0x873caf09b6668db216191a0121bc481e261643b3"
         uniswapV2RouterAddress = "0x05fF2B0DB69458A0750badebc4f9e13aDd608C7F"
         uniswapV2FactoryAddress = "0xBCfCcbde45cE874adCB698cC183deBcF17952812"
+        nftTransferContractAddress = "0x718e40874dac43d840f1e9bb135c3c098174e832"
+        bridgeSetupContractAddress = "0x35baced894af326573a85565c1cf3aed54394b60"
         
     case "goerli":
         chainID = BigUInt(5)
@@ -340,6 +341,29 @@ public func changeJsonObject(useData: [String: Any]) -> JSON {
     return jsonDictionary
 }
 
+public func getNetworkFee(network: String, to_network: String, fee_type: String) async throws -> JSON {
+    var resultArray: JSON = JSON([])
+    var resultData: JSON = JSON()
+    var result: JSON = JSON()
+    resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
+    do {
+        networkSettings(network: network)
+        var url = try await URL(string:rpcUrl)
+        let web3 = try await Web3.new(url!)
+        let a = EthereumAddress(from: bridgeConfigContractAddress)
+        let contract = web3.contract(abiBridgeConfig, at: a)!
+        let toNetworkHex = textToHex(to_network)!
+        let readOp = try await contract.createReadOperation("getNetworkFeeIdxByName", parameters: [BigUInt(toNetworkHex)])!.callContractMethod()
+        print(readOp["0"])
+        let b: BigUInt? = readOp["0"] as! BigUInt
+        let readOp2 = try await contract.createReadOperation("getNetworkFeeByIdx", parameters: [b])!.callContractMethod()
+        print(readOp2["0"])
+    } catch let error{
+        
+    }
+    return resultData
+}
+
 // get Gas Price
 public func getEstimateGasAsync(network: String, tx_type: String, token_address: String? = nil, from: String? = nil, to: String? = nil, amount: String? = nil, token_id: String? = nil, to_token_address: String? = nil, to_network: String? = nil, batch_token_id: [String]? = nil, batch_token_amount: [String]? = nil, name: String? = nil, symbol: String? = nil, base_uri: String? = nil, uri_type: String? = nil, token_uri: String? = nil, batch_token_uri: [String]? = nil, start_id: String? = nil, end_id: String? = nil) async throws -> JSON {
     
@@ -357,12 +381,6 @@ public func getEstimateGasAsync(network: String, tx_type: String, token_address:
         switch tx_type {
         case "baseFee":
             gasPrice = try await web3.eth.gasPrice()
-//            let a = EthereumAddress(from: "0x33fcf21e795447cc1668ef2ca06dbf78eb180763")
-//            let contract = web3.contract(, at: a)!
-//            let readOp = contract.createReadOperation("owner")!
-//            readOp.transaction.from = EthereumAddress("0x2BfDa9A30384FcFa91D6D834D1491b4094C375A3")
-//            let response = try await readOp.callContractMethod()
-//            print(response)
         case "transferCoin":
             if let toAddress = to, let fromAddress = from, let tokenAmount = amount {
                 let from = EthereumAddress(fromAddress)!
@@ -585,5 +603,24 @@ public func getEstimateGasAsync(network: String, tx_type: String, token_address:
         resultArray.arrayObject?.append(result)
         resultData = changeJsonObject(useData:["result": "FAIL", "error": resultArray])
         return resultData
+    }
+}
+
+public func textToHex(_ text: String) -> UInt64? {
+    if text.isEmpty {
+        return nil
+    }
+    
+    var hexString = "0x"
+    
+    for char in text {
+        let s = String(char.unicodeScalars.first!.value, radix: 16)
+        hexString += String(repeating: "0", count: 2 - s.count) + s
+    }
+    
+    if let decimalNumber = UInt64(hexString.dropFirst(2), radix: 16) {
+        return decimalNumber
+    } else {
+        return nil
     }
 }

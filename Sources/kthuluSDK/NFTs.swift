@@ -2092,8 +2092,8 @@ public func bridgeErc721Async( network: String,
         let gasPriceEstimate = try await getEstimateGasAsync(network: network, tx_type: "baseFee")
         var gasPrice: BigUInt? = nil
         if let valueArray = gasPriceEstimate["value"].arrayObject as? [[String: Any]] {
-            if let gas = valueArray[0]["gas"] as? BigUInt {
-                gasPrice = gas
+            if let gas = valueArray[0]["gas"] as? String {
+                gasPrice = BigUInt(gas)
             }
         }
         var txFee = BigUInt(0)
@@ -2186,8 +2186,8 @@ public func bridgeErc1155Async( network: String,
         let gasPriceEstimate = try await getEstimateGasAsync(network: network, tx_type: "baseFee")
         var gasPrice: BigUInt? = nil
         if let valueArray = gasPriceEstimate["value"].arrayObject as? [[String: Any]] {
-            if let gas = valueArray[0]["gas"] as? BigUInt {
-                gasPrice = gas
+            if let gas = valueArray[0]["gas"] as? String {
+                gasPrice = BigUInt(gas)
             }
         }
         var txFee = BigUInt(0)
