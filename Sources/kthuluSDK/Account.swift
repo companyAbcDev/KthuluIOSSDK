@@ -179,11 +179,13 @@ public func restoreAccountAsync(network: [String]? = nil, privateKey: String? = 
 
 // Get account info
 public func getAccountInfoAsync(account: String) async throws -> JSON {
+    var result: JSON = JSON()
     var resultArray: JSON = JSON([])
     var resultData: JSON = changeJsonObject(useData: ["result": "FAIL", "value": resultArray])
     
     do {
         guard let address: JSON = loadJsonData(key: account.lowercased()) else {
+            resultArray.arrayObject?.append(result)
             resultData = changeJsonObject(useData: ["result": "OK", "value": resultArray])
             return resultData
         }
@@ -202,10 +204,10 @@ public func getAccountInfoAsync(account: String) async throws -> JSON {
             resultData = changeJsonObject(useData: ["result": "OK", "value": resultArray])
         }
     } catch let error {
-        var errorResult: JSON = JSON()
-        errorResult["error"] = JSON(error.localizedDescription)
-        resultArray.arrayObject?.append(errorResult)
-        resultData = changeJsonObject(useData: ["result": "FAIL", "value": resultArray])
+        result["error"] = JSON(error.localizedDescription)
+        resultArray.arrayObject?.append(result)
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
+        return resultData
     }
     
     return resultData
