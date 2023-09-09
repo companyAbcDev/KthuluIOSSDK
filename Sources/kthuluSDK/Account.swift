@@ -16,7 +16,8 @@ import SwiftyJSON
 public func createAccountsAsync(network: [String]) async throws -> JSON {
     var resultArray: JSON = JSON([])
     var resultData: JSON = JSON()
-    resultData = changeJsonObject(useData: ["result": "Fail", "value": resultArray])
+    var result: JSON = JSON()
+    resultData = changeJsonObject(useData: ["result": "FAIL", "value": resultArray])
     
     let allowedStrings: Set<String> = ["ethereum", "cypress", "polygon", "bnb"]
 
@@ -46,7 +47,10 @@ public func createAccountsAsync(network: [String]) async throws -> JSON {
         encrytPrivateKey = try encrypt(input: "0x\(privateKey.toHexString())")!
         encrytMnemonics = try encrypt(input: mnemonics)!
     } catch {
-        print("Encrypt error: \(error)")
+        result["error"] = JSON(error.localizedDescription)
+        resultArray.arrayObject?.append(result)
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
+        return resultData
     }
     
     do{
@@ -81,7 +85,7 @@ public func createAccountsAsync(network: [String]) async throws -> JSON {
 public func restoreAccountAsync(network: [String]? = nil, privateKey: String? = nil, mnemonic: String? = nil)  async throws -> JSON {
     var resultArray: JSON = JSON([])
     var resultData: JSON = JSON()
-    resultData = changeJsonObject(useData: ["result": "Fail", "value": resultArray])
+    resultData = changeJsonObject(useData: ["result": "FAIL", "value": resultArray])
     
     var networkArray: Array<String> = []
     if(network == nil){
@@ -176,28 +180,37 @@ public func restoreAccountAsync(network: [String]? = nil, privateKey: String? = 
 // Get account info
 public func getAccountInfoAsync(account: String) async throws -> JSON {
     var resultArray: JSON = JSON([])
-    var resultData: JSON = JSON()
-    resultData = changeJsonObject(useData:["result": "Fail", "value": resultArray])
+    var resultData: JSON = changeJsonObject(useData: ["result": "FAIL", "value": resultArray])
     
-    var equalAddress: JSON = JSON()
-    do{
-        if let address: JSON = loadJsonData(key: account.lowercased()) {
-            var equalAccount = address["account"].string
-            if account.lowercased() == equalAccount?.lowercased() {
-                equalAddress = address
-                
-                // Decrypt the values of private and mnemonic
-                equalAddress["private"].string = try decrypt(input: equalAddress["private"].string!);
-                if(equalAddress["mnemonic"] != ""){
-                    equalAddress["mnemonic"].string = try decrypt(input: equalAddress["mnemonic"].string!);
-                }
-                resultArray.arrayObject?.append(equalAddress)
+    do {
+        guard let address: JSON = loadJsonData(key: account.lowercased()) else {
+            resultData = changeJsonObject(useData: ["result": "OK", "value": resultArray])
+            return resultData
+        }
+        
+        if account.lowercased() == address["account"].string?.lowercased() {
+            var equalAddress = address
+            
+            // Decrypt the values of private and mnemonic
+            equalAddress["private"].string = try decrypt(input: equalAddress["private"].string ?? "")
+            
+            if let mnemonic = equalAddress["mnemonic"].string, !mnemonic.isEmpty {
+                equalAddress["mnemonic"].string = try decrypt(input: mnemonic)
             }
+            
+            resultArray.arrayObject?.append(equalAddress)
             resultData = changeJsonObject(useData: ["result": "OK", "value": resultArray])
         }
+    } catch let error {
+        var errorResult: JSON = JSON()
+        errorResult["error"] = JSON(error.localizedDescription)
+        resultArray.arrayObject?.append(errorResult)
+        resultData = changeJsonObject(useData: ["result": "FAIL", "value": resultArray])
     }
+    
     return resultData
 }
+
 
 // Validation account
 public func isValidAddressAsync(account: String) async throws -> Bool {
@@ -342,7 +355,7 @@ public func getTokenListAsync(network: String, owner: String, sort: String? = "D
     
     var resultArray: JSON = JSON([])
     var resultData: JSON = JSON()
-    resultData = changeJsonObject(useData:["result": "Fail", "value": resultArray])
+    resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     
     do{
         var offset: Int = (page_number! - 1) * limit!
@@ -425,7 +438,7 @@ public func getTokenListAsync(network: String, owner: String, sort: String? = "D
 public func getTokenHistoryAsync(network: String, owner: String, token_id: String? = "0x0000000000000000000000000000000000000000", sort: String? = "DESC", limit: Int? = 0, page_number: Int? = 1) async throws -> JSON {
     var resultArray: JSON = JSON([])
     var resultData: JSON = JSON()
-    resultData = changeJsonObject(useData:["result": "Fail", "value": resultArray])
+    resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     do{
         var offset: Int = (page_number! - 1) * limit!
         
@@ -505,7 +518,7 @@ public func getTokenHistoryAsync(network: String, owner: String, token_id: Strin
 public func getUsersAsync(owner: String) async throws -> JSON {
     var resultArray: JSON = JSON([])
     var resultData: JSON = JSON()
-    resultData = changeJsonObject(useData:["result": "Fail", "value": resultArray])
+    resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     
     do {
         let accountQuery =

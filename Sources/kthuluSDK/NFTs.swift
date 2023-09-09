@@ -53,8 +53,7 @@ public func getMintableAddress(
                 "creator IN ('0x780A19638D126d59f4Ed048Ae1e0DC77DAf39a77','0x7E055Cb85FBE64da619865Df8a392d12f009aD81')" +
             "AND " +
                 " owner IN (\(own))"
-        
-        print(CAQuery)
+
         let CAResult = sqlJsonArray(sqlQuery: CAQuery)
         
         do {
@@ -246,9 +245,7 @@ public func getNFTsHide(
                 "network IN (\(net)) " +
                 "AND " +
                     "account IN (\(acc))"
-        
-        print(hideQuery)
-        print(sumQuery)
+
         
         let hideResult = sqlJsonArray(sqlQuery: hideQuery)
         let sumResult = sqlJsonArray(sqlQuery: sumQuery)
@@ -384,7 +381,6 @@ public func getNFTsByWallet(network: [String],
     if let limitValue = limit {
         strQuery += " LIMIT \(limitValue) OFFSET \(offset)"
     }
-    print("String ==== \n", strQuery)
 
     var sumQuery =
             "SELECT" +
@@ -586,7 +582,7 @@ public func getNFTsByWalletArray(network: [String],
     if let limitValue = limit {
         strQuery += " LIMIT \(limitValue) OFFSET \(offset)"
     }
-//    print(strQuery)
+
     var sumQuery =
             "SELECT" +
                 " count(*) AS sum" +
@@ -617,8 +613,7 @@ public func getNFTsByWalletArray(network: [String],
         sumQuery += " AND owner.collection_id = '\(collectionIdValue)' "
     }
     sumQuery += " AND NOT EXISTS ( SELECT 1 FROM nft_hide_table AS hide WHERE hide.network = owner.network AND hide.account = owner.owner_account AND hide.token_id = owner.token_id AND hide.collection_id = owner.collection_id)"
-    
-//    print(sumQuery)
+ 
     let nftResult = sqlJsonArray(sqlQuery: strQuery)
     let sumResult = sqlJsonArray(sqlQuery: sumQuery)
     
