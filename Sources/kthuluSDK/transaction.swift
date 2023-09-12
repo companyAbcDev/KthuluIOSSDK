@@ -1090,3 +1090,21 @@ public func tokenForCoinswapAsync(
         }
     return resultData
 }
+
+public func checkTransactionStatusAsync(network: String, txHash: String) async throws -> String {
+    do {
+        networkSettings(network: network)
+        let url = try await URL(string: rpcUrl)
+        let web3 = try await Web3.new(url!)
+        let txReceipt = try await web3.eth.transactionReceipt(Data.fromHex(txHash)!)
+        if(txReceipt.status == .ok) {
+            return "Transaction Successful"
+        } else if(txReceipt.status == .failed) {
+            return "Transaction Failed"
+        } else {
+            return "Transaction not yet mined"
+        }
+    } catch let error {
+        return "Transaction not yet mined"
+    }
+}
