@@ -353,17 +353,33 @@ public func getTokenInfoAsync(network: String, token_id: String) async throws ->
 }
 
 // Get token info list async
-public func getTokenListAsync(network: String, owner: String, size: String?="100") async throws -> JSON {
-    
+public func getTokenListAsync(network: String, owner: String, size: String? = "100") async throws -> JSON {
+    var jsonObject: JSON = JSON()
     var resultArray: JSON = JSON([])
-    var resultData: JSON = JSON()
-    resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
-    
-    do {
-        let jsonResponse = try fetchJSONData(network: network, ownerAddress: owner, size: size)
-        
+    var resultData = changeJsonObject(useData: ["result": "FAIL", "value": resultArray])
+
+    let urlString = "https://app.kthulu.io:3302/token/list/\(network)/\(owner)/\(size!)"
+
+    // URLSession을 사용하여 데이터를 가져옵니다.
+    if let url = URL(string: urlString) {
+        let (data, _) = try await URLSession.shared.data(from: url)
+        do {
+            if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+                jsonObject = changeJsonObject(useData: json)
+            } else {
+                print("유효한 JSON 형식이 아닙니다.")
+                return resultData
+            }
+        } catch {
+            print("JSON 파싱 오류: \(error)")
+            return resultData
+        }
+    } else {
+        print("유효하지 않은 URL입니다.")
+        return resultData
     }
-    return resultData
+
+    return jsonObject
 }
 
 // Token transfer history

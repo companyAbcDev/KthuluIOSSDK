@@ -53,7 +53,8 @@ public func getMintableAddress(
                 "creator IN ('0x780A19638D126d59f4Ed048Ae1e0DC77DAf39a77','0x7E055Cb85FBE64da619865Df8a392d12f009aD81')" +
             "AND " +
                 " owner IN (\(own))"
-
+        
+        print(CAQuery)
         let CAResult = sqlJsonArray(sqlQuery: CAQuery)
         
         do {
@@ -245,7 +246,9 @@ public func getNFTsHide(
                 "network IN (\(net)) " +
                 "AND " +
                     "account IN (\(acc))"
-
+        
+        print(hideQuery)
+        print(sumQuery)
         
         let hideResult = sqlJsonArray(sqlQuery: hideQuery)
         let sumResult = sqlJsonArray(sqlQuery: sumQuery)
@@ -381,6 +384,7 @@ public func getNFTsByWallet(network: [String],
     if let limitValue = limit {
         strQuery += " LIMIT \(limitValue) OFFSET \(offset)"
     }
+    print("String ==== \n", strQuery)
 
     var sumQuery =
             "SELECT" +
@@ -508,207 +512,58 @@ public func getNFTsByWallet(network: [String],
 
 
 //nft 조회 (Array)
-public func getNFTsByWalletArray(network: [String],
-                            account: [String]? = nil,
-                            collection_id: String? = nil,
-                            sort: String? = nil,
-                            limit: Int? = nil,
-                            page_number: Int? = nil) async throws -> JSON {
-    var nfts: JSON = JSON()
-    let net = "'\(network.joined(separator: "','"))'"
-    let acc = "'\(account?.joined(separator: "','") ?? "")'"
-    
-    var offset: Int
-    if let pageNumber = page_number, let limitValue = limit {
-        offset = (pageNumber - 1) * limitValue
-    } else {
-        offset = 0 // 또는 적절한 기본값 설정
-    }
+public func getNFTsByWalletArray(network: [String], account: [String], collectionID: String? = nil, sort: String? = nil, limit: Int? = nil, pageNumber: Int? = nil) async throws -> [String: Any] {
+    var resultArray: [Any] = []
+    var jsonData: [String: Any] = ["result": "FAIL", "value": resultArray]
 
-    var strQuery =
-        "SELECT" +
-            " owner.network AS network," +
-            " collection.collection_id AS collection_id," +
-            " collection.collection_name AS collection_name," +
-            " collection.collection_symbol AS collection_symbol," +
-            " collection.creator AS creator," +
-            " collection.deployment_date AS deployment_date," +
-            " collection.total_supply AS total_supply," +
-            " token.nft_type AS nft_type," +
-            " token.minted_time AS minted_time," +
-            " token.block_number AS block_number," +
-            " owner.owner_account AS owner_account," +
-            " token.token_id AS token_id," +
-            " owner.balance AS balance," +
-            " token.token_uri AS token_uri," +
-            " token.nft_name AS nft_name," +
-            " token.image_url AS image_url," +
-            " token.external_url AS external_url," +
-            " token.token_info AS token_info" +
-        " FROM" +
-            " nft_owner_table AS owner" +
-        " JOIN" +
-            " nft_token_table AS token" +
-        " ON" +
-            " owner.collection_id = token.collection_id" +
-            " AND" +
-                " owner.token_id = token.token_id" +
-            " AND" +
-                " owner.network = token.network" +
-        " JOIN" +
-            " nft_collection_table AS collection" +
-        " ON" +
-            " token.collection_id = collection.collection_id" +
-            " AND" +
-                " token.network = collection.network" +
-        " WHERE" +
-            " owner.network IN (\(net))" +
-            " AND" +
-                " owner.balance != '0'"
-    if (account != nil) {
-        strQuery += " AND owner.owner_account IN (\(acc))"
-    }
-    if let collectionIdValue = collection_id {
-        strQuery += " AND owner.collection_id = '\(collectionIdValue)'"
-    }
-    strQuery += " AND NOT EXISTS ( SELECT 1 FROM nft_hide_table AS hide WHERE hide.network = owner.network AND hide.account = owner.owner_account AND hide.token_id = owner.token_id AND hide.collection_id = owner.collection_id)"
-    strQuery += " ORDER BY token.block_number"
-    if sort == "asc" {
-        strQuery += " ASC"
-    } else {
-        strQuery += " DESC"
-    }
-    strQuery += ", CAST(token.token_id AS SIGNED) DESC"
-    if let limitValue = limit {
-        strQuery += " LIMIT \(limitValue) OFFSET \(offset)"
-    }
+    let url = URL(string: "https://app.kthulu.io:3302/nft/getNftListAsync")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("application/json; charset=UTF-8", forHTTPHeaderField: "Content-Type")
 
-    var sumQuery =
-            "SELECT" +
-                " count(*) AS sum" +
-            " FROM" +
-                " nft_owner_table AS owner" +
-            " JOIN" +
-                " nft_token_table AS token" +
-            " ON" +
-                " owner.collection_id = token.collection_id" +
-                " AND" +
-                    " owner.token_id = token.token_id" +
-                " AND" +
-                    " owner.network = token.network" +
-            " JOIN" +
-                " nft_collection_table AS collection" +
-            " ON" +
-                " token.collection_id = collection.collection_id" +
-                " AND" +
-                    " token.network = collection.network" +
-            " WHERE" +
-                " owner.network IN (\(net))" +
-                " AND" +
-                " owner.balance != '0'"
-    if (account != nil) {
-        sumQuery += " AND owner.owner_account IN (\(acc))"
-    }
-    if let collectionIdValue = collection_id {
-        sumQuery += " AND owner.collection_id = '\(collectionIdValue)' "
-    }
-    sumQuery += " AND NOT EXISTS ( SELECT 1 FROM nft_hide_table AS hide WHERE hide.network = owner.network AND hide.account = owner.owner_account AND hide.token_id = owner.token_id AND hide.collection_id = owner.collection_id)"
- 
-    let nftResult = sqlJsonArray(sqlQuery: strQuery)
-    let sumResult = sqlJsonArray(sqlQuery: sumQuery)
-    
+    var jsonPayload: [String: Any] = [
+        "network": network,
+        "account": account,
+        "collection_id": collectionID as Any,
+        "sort": sort as Any,
+        "limit": limit as Any,
+        "page_number": pageNumber as Any
+    ]
+
     do {
-        if((account == nil && collection_id == nil) || (limit == nil && page_number != nil)){
-            throw CustomError.invalidParameters
-        }
-        var updatedNFTs: [[String: Any]] = []
-        
-        for (_, subJson): (String, JSON) in nftResult {
-            let network = subJson["network"].string
-            let collection_id = subJson["collection_id"].string
-            let collection_name = subJson["collection_name"].string
-            let collection_symbol = subJson["collection_symbol"].string
-            let collection_creator = subJson["creator"].string
-            let collection_timestamp = subJson["deployment_date"].int ?? 0
-            let collection_total_supply = subJson["total_supply"].string
-            let nft_type = subJson["nft_type"].string
-            let minted_timestamp = subJson["minted_time"].int ?? 0
-            let block_number = subJson["block_number"].int ?? 0
-            let owner = subJson["owner_account"].string
-            let token_id = subJson["token_id"].string
-            let token_balance = subJson["balance"].string
-            let token_uri = subJson["token_uri"].string
-            let name = subJson["nft_name"].string
-            let image = subJson["image_url"].string
-            let external_url = subJson["external_url"].string
-            let metadata = subJson["token_info"].string
-            var description: String? = nil
-            var attributes: JSON? = nil
-            if let metadata = metadata {
-                let metadataJSON = JSON(parseJSON: metadata)
-                description = metadataJSON["description"].string
-                if metadataJSON["attributes"].array != nil {
-                    attributes = metadataJSON["attributes"]
-                }
-            }
-            
+        request.httpBody = try JSONSerialization.data(withJSONObject: jsonPayload)
+    } catch {
+        throw error
+    }
 
-            let objRes: [String: Any] = [
-                "network": network,
-                "collection_id": collection_id,
-                "collection_name": collection_name,
-                "collection_symbol": collection_symbol,
-                "collection_creator": collection_creator,
-                "collection_timestamp": collection_timestamp,
-                "collection_total_supply": collection_total_supply,
-                "nft_type": nft_type,
-                "minted_timestamp": minted_timestamp,
-                "block_number": block_number,
-                "owner": owner,
-                "token_id":token_id,
-                "token_balance": token_balance,
-                "token_uri": token_uri,
-                "name": name,
-                "description": description,
-                "image": image,
-                "external_url": external_url,
-                "attributes": attributes,
-                "metadata": metadata
-            ]
-            updatedNFTs.append(objRes)
+    do {
+        let (data, response) = try await URLSession.shared.data(for: request) // Corrected
+
+        if let httpResponse = response as? HTTPURLResponse {
+            guard httpResponse.statusCode == 200 else {
+                let errorMessage = "HTTP error code: \(httpResponse.statusCode)"
+                jsonData["error"] = errorMessage
+                resultArray = [jsonData]
+                return ["result": "FAIL", "value": resultArray]
+            }
         }
-        
-        let page_count: Int?
-        var sum: Int? = nil
-        if let sumValue = sumResult.array?.first?["sum"].int {
-            sum = sumValue
+
+        do {
+            if let jsonResponse = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+                return jsonResponse
+            } else {
+                throw NSError(domain: "Invalid Response", code: 0, userInfo: nil)
+            }
+        } catch {
+            throw error
         }
-        if let sumValue = sum, let limitValue = limit {
-            page_count = Int(ceil(Double(sumValue) / Double(limitValue)))
-        } else {
-            page_count = 0
-        }
-        
-        nfts["result"] = JSON("OK")
-        if let sort = sort {
-            nfts["sort"] = JSON(sort)
-        } else {
-            nfts["sort"] = JSON("desc") // 또는 적절한 기본값 설정
-        }
-        nfts["page_count"] = JSON(page_count)
-        if let sumValue = sumResult.array?.first?["sum"].int {
-            nfts["sum"] = JSON(sumValue)
-        } else {
-            nfts["sum"] = JSON(0)
-        }
-        nfts["value"] = JSON(updatedNFTs)
-        return nfts
-    } catch _{
-        let failJSON: JSON = ["result": JSON("FAIL"), "value": JSON([])]
-        return failJSON
+    } catch {
+        resultArray = []
+        jsonData["error"] = error.localizedDescription
+        resultArray.append(jsonData)
+        return ["result": "FAIL", "value": resultArray]
     }
 }
-
 
 //거래내역 조회
 public func getNFTsTransferHistory(network: String,
