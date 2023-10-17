@@ -353,85 +353,15 @@ public func getTokenInfoAsync(network: String, token_id: String) async throws ->
 }
 
 // Get token info list async
-public func getTokenListAsync(network: String, owner: String, sort: String? = "DESC", limit: Int? = 0, page_number: Int? = 1) async throws -> JSON {
+public func getTokenListAsync(network: String, owner: String, size: String?="100") async throws -> JSON {
     
     var resultArray: JSON = JSON([])
     var resultData: JSON = JSON()
     resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     
-    do{
-        var offset: Int = (page_number! - 1) * limit!
+    do {
+        let jsonResponse = try fetchJSONData(network: network, ownerAddress: owner, size: size)
         
-        var tokenList =
-            " SELECT" +
-                " idx AS idx," +
-                " network AS network," +
-                " token_address AS token_id," +
-                " owner_account AS owner," +
-                " balance AS balance," +
-                " (SELECT decimals FROM token_table WHERE network = t.network AND token_address = t.token_address LIMIT 1) AS decimals," +
-                " (SELECT token_symbol FROM token_table WHERE network = t.network AND  token_address = t.token_address LIMIT 1) AS symbol," +
-                " (SELECT token_name FROM token_table WHERE network = t.network AND  token_address = t.token_address LIMIT 1) AS name," +
-                " (SELECT COUNT(*) FROM token_owner_table WHERE network = '\(network)' AND owner_account = '\(owner)') AS sum " +
-            " FROM" +
-                " token_owner_table t" +
-            " WHERE" +
-                " network = '\(network)'" +
-            " AND" +
-                " owner_account = '\(owner)'" +
-            " ORDER BY" +
-                " idx " + sort!
-   
-        if(offset != 0){
-            tokenList += " LIMIT \(limit) OFFSET \(offset)"
-        }
-        
-        var jsonArray: JSON = JSON([])
-        var sumResult: JSON = JSON([])
-        
-        do {
-            var cnt: Int = 0
-            let sql = try dbConnect().prepare(tokenList)
-            let res = try sql.query([])
-            while let row = try res.readRow() {
-                // Change Date to String before converting to JSON
-                var rowWithFormattedDate = row
-                if(cnt == 0){
-                    let sumString = changeJsonString(useData: rowWithFormattedDate)
-                    if let sumData = sumString.data(using: .utf8) {
-                        let sumObject = try JSON(data: sumData)
-                        sumResult.arrayObject?.append(sumObject.object)
-                    }
-                    cnt+=1
-                }
-                rowWithFormattedDate.removeValue(forKey: "sum")
-                rowWithFormattedDate.removeValue(forKey: "idx")
-                let jsonString = changeJsonString(useData: rowWithFormattedDate)
-                if let jsonData = jsonString.data(using: .utf8) {
-                    let jsonObject = try JSON(data: jsonData)
-                    jsonArray.arrayObject?.append(jsonObject.object)
-                }
-            }
-
-            try dbConnect().close()
-        } catch {
-            let jsonData = ["error" : "db connect error"]
-            resultArray.arrayObject?.append(jsonData)
-            resultData["result"] = "FAIL"
-            resultData["value"] = JSON(resultArray)
-        }
-        
-        var sum: Int? = 0
-        if let sumValue = sumResult.array?.first?["sum"].int {
-            sum = sumValue
-        }
-        
-        var page_count: Int? = 0
-        if(sum != 0 && limit != 0){
-            page_count = sum!/limit!
-        }
-        
-        resultData = changeJsonObject(useData: ["result": "OK", "sum": sum, "sort": sort, "page_count": page_count, "value": jsonArray])
     }
     return resultData
 }

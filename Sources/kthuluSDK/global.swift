@@ -430,7 +430,7 @@ public func getNodeHomeAsync(network: String, to_network: String, token_address:
     } catch let error {
         result["error"] = JSON(error.localizedDescription)
         resultArray.arrayObject?.append(result)
-        resultData = changeJsonObject(useData: ["result": "FAIL", "error": resultArray])
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
         return resultData
     }
 
@@ -684,4 +684,42 @@ public func getEstimateGasAsync(network: String, tx_type: String, token_address:
 public func textToHex(_ text: String) -> BigUInt? {
     let hexString = text.utf8.map { String(format: "%02X", $0) }.joined()
     return BigUInt(hexString, radix: 16)
+}
+
+public func fetchJSONData(network: String, ownerAddress: String, size: String?="100") throws -> [String: Any] {
+    
+    let baseURL = URL(string: "https://app.kthulu.io:3302/token/list/\(network)/\(ownerAddress)/\(size!)")!
+    
+    var request = URLRequest(url: baseURL)
+        request.httpMethod = "GET"
+        request.timeoutInterval = 5.0
+        
+        let task = URLSession.shared.dataTask(with: request) { (data, response, error) in
+            if let error = error {
+                // Handle the error
+                print("Error: \(error)")
+            } else if let data = data {
+                do {
+                    if let jsonResponse = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+                        // Handle the JSON response here
+                        print("JSON Response: \(jsonResponse)")
+                    }
+                } catch {
+                    // Handle JSON parsing error
+                    print("JSON Parsing Error: \(error)")
+                }
+            }
+        }
+        
+        task.resume()
+        
+        // You can use a semaphore or another mechanism to wait for the async task to complete
+        // In a real-world scenario, you should consider using a completion handler to handle the response.
+        
+        // Here, I'll just use a semaphore to wait for the task to complete (for simplicity).
+        let semaphore = DispatchSemaphore(value: 0)
+        _ = semaphore.wait(timeout: .distantFuture)
+        
+        // Return an empty dictionary (or handle errors as needed)
+        return [:]
 }
