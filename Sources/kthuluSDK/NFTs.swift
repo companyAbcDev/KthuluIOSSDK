@@ -537,7 +537,7 @@ public func getNFTsByWalletArray(network: [String], account: [String], collectio
     }
 
     do {
-        let (data, response) = try await URLSession.shared.data(for: request) // Corrected
+        let (data, response) = try await URLSession.shared.data(for: request)
 
         if let httpResponse = response as? HTTPURLResponse {
             guard httpResponse.statusCode == 200 else {
@@ -549,7 +549,12 @@ public func getNFTsByWalletArray(network: [String], account: [String], collectio
         }
 
         do {
-            if let jsonResponse = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+            if var jsonResponse = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+                // Check if "value" is an NSArray and convert it to an empty array if it is
+                if var value = jsonResponse["value"] as? [Any] {
+                    value = value.isEmpty ? [] : value
+                    jsonResponse["value"] = value
+                }
                 return jsonResponse
             } else {
                 throw NSError(domain: "Invalid Response", code: 0, userInfo: nil)
