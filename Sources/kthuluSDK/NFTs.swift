@@ -512,7 +512,7 @@ public func getNFTsByWallet(network: [String],
 
 
 //nft 조회 (Array)
-public func getNFTsByWalletArray(network: [String], account: [String], collectionID: String? = nil, sort: String? = nil, limit: Int? = nil, pageNumber: Int? = nil) async throws -> [String: Any] {
+public func getNFTsByWalletArray(network: [String], account: [String], collectionID: String? = nil, sort: String? = nil, limit: Int? = nil, pageNumber: Int? = nil) async throws -> JSON {
     var resultArray: [Any] = []
     var jsonData: [String: Any] = ["result": "FAIL", "value": resultArray]
 
@@ -555,7 +555,7 @@ public func getNFTsByWalletArray(network: [String], account: [String], collectio
                     value = value.isEmpty ? [] : value
                     jsonResponse["value"] = value
                 }
-                return jsonResponse
+                return changeJsonObject(useData: jsonResponse)
             } else {
                 throw NSError(domain: "Invalid Response", code: 0, userInfo: nil)
             }
