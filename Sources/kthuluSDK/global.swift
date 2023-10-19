@@ -24,8 +24,8 @@ public func KthuluSdkVersion(){
 }
 
 var dbServer: String? = "210.207.161.10"
-var dbUser: String? = "kthuluUser"
-var dbPasswd: String? = "kthuluUserPw"
+var dbUser: String? = "kthulu_user"
+var dbPasswd: String? = "user123"
 var dbName: String? = "kthulu"
 
 public func dbSetting(server: String, user: String, passwd: String, name: String){

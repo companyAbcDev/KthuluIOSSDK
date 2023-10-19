@@ -15,7 +15,7 @@ enum CustomError: Error {
     case invalidParameters
 }
 public func getMintableAddress(
-    owner:  [String] ) async throws -> JSON {
+    owner: [String] ) async throws -> JSON {
 
     var CADAta: JSON = JSON()
         
@@ -28,33 +28,16 @@ public func getMintableAddress(
             "collection_name, " +
             "collection_symbol, " +
             "nft_type, " +
-            "creator, " +
+            "uri_type, " +
             "owner, " +
-            "total_supply, " +
-            "deployment_date, " +
-            "slug, " +
-            "category, " +
-            "logo_url, " +
-            "s3_image_url, " +
-            "isverified, " +
-            "numOwners, " +
-            "currency, " +
-            "discord_link, " +
-            "twitter_link, " +
-            "instagram_link, " +
-            "facebook_link, " +
-            "telegram_link, " +
-            "external_url " +
+            "base_uri " +
         "FROM " +
             "nft_collection_table " +
         "WHERE " +
-            "network IN ('ethereum','cypress','polygon','bnb') " +
-            "AND " +
-                "creator IN ('0x780A19638D126d59f4Ed048Ae1e0DC77DAf39a77','0x7E055Cb85FBE64da619865Df8a392d12f009aD81')" +
-            "AND " +
-                " owner IN (\(own))"
-        
+            "owner IN (\(own))"
+    
         print(CAQuery)
+        
         let CAResult = sqlJsonArray(sqlQuery: CAQuery)
         
         do {
@@ -66,25 +49,9 @@ public func getMintableAddress(
                 let collection_name = subJson["collection_name"].string
                 let collection_symbol = subJson["collection_symbol"].string
                 let nft_type = subJson["nft_type"].string
-                let creator = subJson["creator"].string
+                let uri_tpye = subJson["uri_tpye"].string
                 let owner = subJson["owner"].string
-                let total_supply = subJson["total_supply"].string
-                let deployment_date = subJson["deployment_date"].int ?? 0
-                let slug = subJson["slug"].string
-                let category = subJson["category"].string
-                let logo_url = subJson["logo_url"].string
-                let s3_image_url = subJson["s3_image_url"].string
-                let isverified = subJson["isverified"].string
-                let numOwners = subJson["numOwners"].int ?? 0
-                let currency = subJson["currency"].string
-                let discord_link = subJson["discord_link"].string
-                let twitter_link = subJson["twitter_link"].string
-                let instagram_link = subJson["instagram_link"].string
-                let facebook_link = subJson["facebook_link"].string
-                let telegram_link = subJson["telegram_link"].string
-                let external_url = subJson["external_url"].string
-                
-                
+                let base_uri = subJson["base_uri"].string
 
                 let objRes: [String: Any] = [
                     "network": network,
@@ -92,23 +59,9 @@ public func getMintableAddress(
                     "collection_name": collection_name,
                     "collection_symbol": collection_symbol,
                     "nft_type": nft_type,
-                    "creator": creator,
+                    "uri_type": uri_tpye,
                     "owner": owner,
-                    "total_supply": total_supply,
-                    "deployment_date": deployment_date,
-                    "slug": slug,
-                    "category": category,
-                    "logo_url": logo_url,
-                    "s3_image_url": s3_image_url,
-                    "isverified": isverified,
-                    "numOwners": numOwners,
-                    "currency": currency,
-                    "discord_link": discord_link,
-                    "twitter_link": twitter_link,
-                    "instagram_link": instagram_link,
-                    "facebook_link": facebook_link,
-                    "telegram_link": telegram_link,
-                    "external_url": external_url,
+                    "base_uri": base_uri
                 ]
                 CAArray.append(objRes)
             }
@@ -572,167 +525,75 @@ public func getNFTsByWalletArray(network: [String], account: [String], collectio
 
 //거래내역 조회
 public func getNFTsTransferHistory(network: String,
-                                   collection_id: String? = nil,
+                                   collection_id: String,
                                    token_id:String? = nil,
-                                   type:String? = nil,
-                                   sort:String? = nil,
-                                   limit:Int? = nil,
-                                   page_number:Int? = nil) async throws -> JSON {
-    var history: JSON = JSON()
+                                   type: String? = nil,
+                                   sort:String? = "DESC",
+                                   limit:Int? = 100,
+                                   page_number:Int? = 1) async throws -> JSON {
+    var resultArray: [Any] = []
+    var jsonData: [String: Any] = ["result": "FAIL", "value": resultArray]
     
-    var offset: Int
-    if let pageNumber = page_number, let limitValue = limit {
-        offset = (pageNumber - 1) * limitValue
-    } else {
-        offset = 0 // 또는 적절한 기본값 설정
-    }
+    let url = URL(string: "https://app.kthulu.io:3302/nft/getNftHistoryAsync")!
     
-    var transferQuery =
-        " SELECT" +
-            " transaction.network AS network," +
-            " transaction.`from` AS from_address," +
-            " transaction.`to` AS to_address," +
-            " transaction.collection_id AS collection_id," +
-            " transaction.block_number AS block_number," +
-            " transaction.`timestamp` AS timestamp," +
-            " transaction.transaction_hash AS transaction_hash," +
-            " transaction.log_id AS log_id," +
-            " transaction.token_id AS token_id," +
-            " transaction.amount AS amount," +
-            " transaction.currency AS currency," +
-            " transaction.currency_symbol AS currency_symbol," +
-            " transaction.decimals AS decimals," +
-            " transaction.price AS price," +
-            " transaction.market AS market," +
-            " transaction.sales_info AS sales_info," +
-            " transaction.transaction_type AS type" +
-        " FROM " +
-            " nft_transaction_table AS transaction" +
-        " WHERE " +
-            " transaction.network = '\(network)'"
-        if let token_id = token_id {
-            transferQuery += " AND transaction.token_id = '\(token_id)' "
-        }
-        if let collection_id = collection_id {
-            transferQuery += " AND transaction.collection_id = '\(collection_id)' "
-        }
-        if type == "transfer" {
-            transferQuery += " AND transaction.transaction_type = 'transfer' ORDER BY transaction.block_number"
-        } else if type == "sales" {
-            transferQuery += " AND transaction.transaction_type = 'sales' ORDER BY transaction.block_number"
-        } else {
-            transferQuery += " ORDER BY transaction.block_number"
-        }
-        if sort == "asc" {
-            transferQuery += " ASC"
-        } else {
-            transferQuery += " DESC"
-        }
-        transferQuery += ", CAST(transaction.token_id AS SIGNED) DESC"
-        if let limit = limit {
-            let offset = offset ?? 0
-            transferQuery += " LIMIT \(limit) OFFSET \(offset)"
-        }
+    var request = URLRequest(url: url)
     
-    var sumQuery =
-        "SELECT" +
-            " count(*) AS sum" +
-        " FROM" +
-            " nft_transaction_table AS transaction" +
-        " WHERE" +
-            " transaction.network = '\(network)'"
-        if let tokenIdValue = token_id {
-            sumQuery += " AND transaction.token_id = '\(tokenIdValue)' "
-        }
-        if let collectionIdValue = collection_id {
-            sumQuery += " AND transaction.collection_id = '\(collectionIdValue)' "
-        }
-        if let typeValue = type {
-            sumQuery += " AND transaction.transaction_type = '\(typeValue)'"
-        }
-
-    let sumResult = sqlJsonArray(sqlQuery: sumQuery)
-    let transferResult = sqlJsonArray(sqlQuery: transferQuery)
+    // 요청 방법을 "POST"로 변경
+    request.httpMethod = "POST"
+    
+    // "Content-Type" 헤더 추가
+    request.setValue("application/json; charset=UTF-8", forHTTPHeaderField: "Content-Type")
+    
+    let jsonPayload: [String: Any] = [
+        "network": network,
+        "collection_id": collection_id as Any,
+        "token_id": token_id as Any,
+        "type": type as Any,
+        "sort": sort as Any,
+        "limit": limit as Any,
+        "page_number": page_number as Any
+    ]
     
     do {
-        if((token_id == nil && collection_id == nil) || (limit == nil && page_number != nil)){
-            throw CustomError.invalidParameters
+        request.httpBody = try JSONSerialization.data(withJSONObject: jsonPayload)
+    } catch {
+        throw error
+    }
+    
+    do {
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        if let httpResponse = response as? HTTPURLResponse {
+            guard httpResponse.statusCode == 200 else {
+                let errorMessage = "HTTP error code: \(httpResponse.statusCode)"
+                jsonData["error"] = errorMessage
+                resultArray = [jsonData]
+                return ["result": "FAIL", "value": resultArray]
+            }
         }
         
-        var transferData: [[String: Any]] = []
-        
-        for (_, subJson): (String, JSON) in transferResult {
-            let network = subJson["network"].string
-            let from_address = subJson["from_address"].string
-            let to_address = subJson["to_address"].string
-            let collection_id = subJson["collection_id"].string
-            let block_number = subJson["block_number"].int ?? 0
-            let timestamp = subJson["timestamp"].int ?? 0
-            let transaction_hash = subJson["transaction_hash"].string
-            let log_id = subJson["log_id"].string
-            let token_id = subJson["token_id"].string
-            let amount = subJson["amount"].string
-            let currency = subJson["currency"].string
-            let currency_symbol = subJson["currency_symbol"].string
-            let decimals = subJson["decimals"].string
-            let price = subJson["price"].string
-            let market = subJson["market"].string
-            let sales_info = subJson["sales_info"].string
-            let transaction_type = subJson["type"].string
-            
-            let objRes: [String: Any] = [
-                "network": network,
-                "from": from_address,
-                "to": to_address,
-                "collection_id": collection_id,
-                "block_number": block_number,
-                "timestamp": timestamp,
-                "transaction_hash": transaction_hash,
-                "log_id":log_id,
-                "token_id":token_id,
-                "amount": amount,
-                "currency": currency,
-                "currency_symbol": currency_symbol,
-                "decimals": decimals,
-                "price": price,
-                "market": market,
-                "sales_info": sales_info,
-                "type": transaction_type
-            ]
-            transferData.append(objRes)
+        do {
+            if var jsonResponse = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+                // Check if "value" is an NSArray and convert it to an empty array if it is
+                if var value = jsonResponse["value"] as? [Any] {
+                    value = value.isEmpty ? [] : value
+                    jsonResponse["value"] = value
+                }
+                return changeJsonObject(useData: jsonResponse)
+            } else {
+                throw NSError(domain: "Invalid Response", code: 0, userInfo: nil)
+            }
+        } catch {
+            throw error
         }
-        
-        let page_count: Int?
-        var sum: Int? = nil
-        if let sumValue = sumResult.array?.first?["sum"].int {
-            sum = sumValue
-        }
-        if let sumValue = sum, let limitValue = limit {
-            page_count = Int(ceil(Double(sumValue) / Double(limitValue)))
-        } else {
-            page_count = 0
-        }
-        
-        history["result"] = JSON("OK")
-        if let sort = sort {
-            history["sort"] = JSON(sort)
-        } else {
-            history["sort"] = JSON("desc")
-        }
-        history["page_count"] = JSON(page_count)
-        if let sumValue = sumResult.array?.first?["sum"].int {
-            history["sum"] = JSON(sumValue)
-        } else {
-            history["sum"] = JSON(0)
-        }
-        history["value"] = JSON(transferData)
-        return history
-    }catch _{
-        let failJSON: JSON = ["result": JSON("FAIL"), "value": JSON([])]
-        return failJSON
+    } catch {
+        resultArray = []
+        jsonData["error"] = error.localizedDescription
+        resultArray.append(jsonData)
+        return ["result": "FAIL", "value": resultArray]
     }
 }
-
+    
 public func sendNFT721TransactionAsync(network: String, from: String, to: String, token_id: String, collection_id: String) async throws -> JSON {
         var resultArray: JSON = JSON([])
         var resultData: JSON = JSON()
@@ -2664,10 +2525,12 @@ public func chkNFTHolder(network: String, account: String, collection_id: String
         var result: JSON = JSON()
         resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
     var query =
-        "SELECT network, collection_id, token_id, nft_type FROM " +
+        "SELECT " +
+            "network, collection_id, token_id, nft_type " +
+        "FROM " +
             "nft_token_table " +
         "WHERE " +
-        "network = '\(network)' " +
+            "network = '\(network)' " +
         "AND " +
             "collection_id = '\(collection_id)' " +
         "AND " +

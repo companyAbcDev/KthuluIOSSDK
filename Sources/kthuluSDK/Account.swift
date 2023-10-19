@@ -383,83 +383,41 @@ public func getTokenListAsync(network: String, owner: String, size: String? = "1
 }
 
 // Token transfer history
-public func getTokenHistoryAsync(network: String, owner: String, token_id: String? = "0x0000000000000000000000000000000000000000", sort: String? = "DESC", limit: Int? = 0, page_number: Int? = 1) async throws -> JSON {
+public func getTokenHistoryAsync(network: String,
+                                 owner: String,
+                                 token_id: String? = "0x0000000000000000000000000000000000000000",
+                                 sort: String?="DESC",
+                                 size: String?="100") async throws -> JSON {
+    var jsonObject: JSON = JSON()
     var resultArray: JSON = JSON([])
     var resultData: JSON = JSON()
     resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
-    do{
-        var offset: Int = (page_number! - 1) * limit!
-        
-        var historyQuery =
-            " SELECT" +
-                " network AS network," +
-                " token_address AS token_id," +
-                " block_number AS block_number," +
-                " timestamp AS timestamp," +
-                " transaction_hash AS transaction_hash," +
-                " `from` AS `from`," +
-                " `to` AS `to`," +
-                " amount AS amount," +
-                " gas_used AS gas_used," +
-                " (SELECT decimals FROM token_table WHERE network = '\(network)' AND token_address = '\(token_id!)') AS decimals," +
-                " (SELECT token_symbol FROM token_table WHERE network = '\(network)' AND token_address = '\(token_id!)') AS symbol," +
-                " (SELECT count(*) FROM token_transfer_table WHERE network = '\(network)' AND token_address = '\(token_id!)' AND (`from` ='\(owner)' OR `to` ='\(owner)')) AS sum" +
-            " FROM" +
-                " token_transfer_table" +
-            " WHERE" +
-                " network = '\(network)'" +
-            " AND" +
-                " token_address = '\(token_id!)'" +
-            " AND" +
-                " (`from` ='\(owner)' OR `to` ='\(owner)')" +
-            " ORDER BY" +
-                " block_number " + sort!
-
-        if(offset != 0){
-            historyQuery += " LIMIT \(limit) OFFSET \(offset)"
-        }
-        
-        var jsonArray: JSON = JSON([])
-        var sumResult: JSON = JSON([])
-        
-        do {
-            var cnt: Int = 0
-            let sql = try dbConnect().prepare(historyQuery)
-            let res = try sql.query([])
-            while let row = try res.readRow() {
-                // Change Date to String before converting to JSON
-                var rowWithFormattedDate = row
-                if(cnt == 0){
-                    let sumString = changeJsonString(useData: rowWithFormattedDate)
-                    if let sumData = sumString.data(using: .utf8) {
-                        let sumObject = try JSON(data: sumData)
-                        sumResult.arrayObject?.append(sumObject.object)
-                    }
-                    cnt+=1
+    
+    let urlString = "https://app.kthulu.io:3302/token/history/\(network)/\(owner)/\(token_id!)/\(sort!)/\(size!)"
+    
+    // URLSession을 사용하여 데이터를 가져옵니다.
+        if let url = URL(string: urlString) {
+            let (data, _) = try await URLSession.shared.data(from: url)
+            do {
+                if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+                    jsonObject = changeJsonObject(useData: json)
+                } else {
+                    print("유효한 JSON 형식이 아닙니다.")
+                    resultArray.arrayObject?.append(["error : 유효한 JSON 형식이 아닙니다."])
+                    return resultData
                 }
-                rowWithFormattedDate.removeValue(forKey: "sum")
-                let jsonString = changeJsonString(useData: rowWithFormattedDate)
-                if let jsonData = jsonString.data(using: .utf8) {
-                    let jsonObject = try JSON(data: jsonData)
-                    jsonArray.arrayObject?.append(jsonObject.object)
-                }
+            } catch {
+                print("JSON 파싱 오류: \(error)")
+                resultArray.arrayObject?.append(["error : \(error)"])
+                return resultData
             }
+        } else {
+            print("유효하지 않은 URL입니다.")
+            resultArray.arrayObject?.append(["error : 유효하지 않은 URL입니다."])
+            return resultData
+        }
 
-            try dbConnect().close()
-        }
-        
-        var sum: Int? = 0
-        if let sumValue = sumResult.array?.first?["sum"].int {
-            sum = sumValue
-        }
-        
-        var page_count: Int? = 0
-        if(sum != 0 && limit != 0){
-            page_count = sum!/limit!
-        }
-        resultData = changeJsonObject(useData: ["result": "OK", "sum": sum, "sort": sort, "page_count": page_count, "value": jsonArray])
-    }
-    return resultData
+        return jsonObject
 }
 
 // Get user asynchronously
