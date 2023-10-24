@@ -353,33 +353,58 @@ public func getTokenInfoAsync(network: String, token_id: String) async throws ->
 }
 
 // Get token info list async
-public func getTokenListAsync(network: String, owner: String, size: String? = "100") async throws -> JSON {
-    var jsonObject: JSON = JSON()
-    var resultArray: JSON = JSON([])
-    var resultData = changeJsonObject(useData: ["result": "FAIL", "value": resultArray])
+public func getTokenListAsync(network: String, owner: String, limit: Int? = 100, pageNumber: Int? = nil, sort: String? = nil) async throws -> JSON {
+    var errorObject: [String:Any]
+    var resultArray: [Any] = []
 
-    let urlString = "https://app.kthulu.io:3302/token/list/\(network)/\(owner)/\(size!)"
+    let url = URL(string: "https://app.kthulu.io:3302/token/getTokenListAsync")!
+    var request = URLRequest(url: url)
+    request.httpMethod = "POST"
+    request.setValue("application/json; charset=UTF-8", forHTTPHeaderField: "Content-Type")
 
-    // URLSession을 사용하여 데이터를 가져옵니다.
-    if let url = URL(string: urlString) {
-        let (data, _) = try await URLSession.shared.data(from: url)
-        do {
-            if let json = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
-                jsonObject = changeJsonObject(useData: json)
-            } else {
-                print("유효한 JSON 형식이 아닙니다.")
-                return resultData
-            }
-        } catch {
-            print("JSON 파싱 오류: \(error)")
-            return resultData
-        }
-    } else {
-        print("유효하지 않은 URL입니다.")
-        return resultData
+    var jsonPayload: [String: Any] = [
+        "network": network,
+        "account": owner,
+        "limit": limit as Any,
+        "page_number": pageNumber as Any,
+        "sort": sort as Any
+    ]
+    do {
+        request.httpBody = try JSONSerialization.data(withJSONObject: jsonPayload)
+    } catch {
+        throw error
     }
 
-    return jsonObject
+    do {
+        let (data, response) = try await URLSession.shared.data(for: request)
+
+        if let httpResponse = response as? HTTPURLResponse {
+            guard httpResponse.statusCode == 200 else {
+                errorObject = ["error": "HTTP error code: \(httpResponse.statusCode)"]
+                resultArray.append(errorObject)
+                return changeJsonObject(useData: ["result": "FAIL", "value": resultArray])
+            }
+        }
+
+        do {
+            if var jsonResponse = try JSONSerialization.jsonObject(with: data, options: []) as? [String: Any] {
+                // Check if "value" is an NSArray and convert it to an empty array if it is
+                if var value = jsonResponse["value"] as? [Any] {
+                    value = value.isEmpty ? [] : value
+                    jsonResponse["value"] = value
+                }
+                return changeJsonObject(useData: jsonResponse)
+            } else {
+                throw NSError(domain: "Invalid Response", code: 0, userInfo: nil)
+            }
+        } catch {
+            throw error
+        }
+    } catch {
+        errorObject = ["error" : error.localizedDescription]
+        resultArray.append(errorObject)
+        return changeJsonObject(useData: ["result": "FAIL", "value": resultArray])
+    }
 }
 
 // Token transfer history
@@ -389,9 +414,8 @@ public func getTokenHistoryAsync(network: String,
                                  sort: String?="DESC",
                                  size: String?="100") async throws -> JSON {
     var jsonObject: JSON = JSON()
-    var resultArray: JSON = JSON([])
-    var resultData: JSON = JSON()
-    resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
+    var errorObject: [String:Any]
+    var resultArray: [Any] = []
     
     let urlString = "https://app.kthulu.io:3302/token/history/\(network)/\(owner)/\(token_id!)/\(sort!)/\(size!)"
     
@@ -403,18 +427,19 @@ public func getTokenHistoryAsync(network: String,
                     jsonObject = changeJsonObject(useData: json)
                 } else {
                     print("유효한 JSON 형식이 아닙니다.")
-                    resultArray.arrayObject?.append(["error : 유효한 JSON 형식이 아닙니다."])
-                    return resultData
+                    errorObject = ["error" : "유효한 JSON 형식이 아닙니다."]
+                    resultArray.append(errorObject)
+                    return changeJsonObject(useData: ["result": "FAIL", "value": resultArray])
                 }
             } catch {
-                print("JSON 파싱 오류: \(error)")
-                resultArray.arrayObject?.append(["error : \(error)"])
-                return resultData
+                errorObject = ["error" : error]
+                resultArray.append(errorObject)
+                return changeJsonObject(useData: ["result": "FAIL", "value": resultArray])
             }
         } else {
-            print("유효하지 않은 URL입니다.")
-            resultArray.arrayObject?.append(["error : 유효하지 않은 URL입니다."])
-            return resultData
+            errorObject = ["error" : "유효하지 않은 URL입니다"]
+            resultArray.append(errorObject)
+            return changeJsonObject(useData: ["result": "FAIL", "value": resultArray])
         }
 
         return jsonObject

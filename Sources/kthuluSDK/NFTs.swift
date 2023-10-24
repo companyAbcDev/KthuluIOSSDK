@@ -466,8 +466,8 @@ public func getNFTsByWallet(network: [String],
 
 //nft 조회 (Array)
 public func getNFTsByWalletArray(network: [String], account: [String], collectionID: String? = nil, sort: String? = nil, limit: Int? = nil, pageNumber: Int? = nil) async throws -> JSON {
+    var errorObject: [String:Any]
     var resultArray: [Any] = []
-    var jsonData: [String: Any] = ["result": "FAIL", "value": resultArray]
 
     let url = URL(string: "https://app.kthulu.io:3302/nft/getNftListAsync")!
     var request = URLRequest(url: url)
@@ -494,10 +494,9 @@ public func getNFTsByWalletArray(network: [String], account: [String], collectio
 
         if let httpResponse = response as? HTTPURLResponse {
             guard httpResponse.statusCode == 200 else {
-                let errorMessage = "HTTP error code: \(httpResponse.statusCode)"
-                jsonData["error"] = errorMessage
-                resultArray = [jsonData]
-                return ["result": "FAIL", "value": resultArray]
+                errorObject = ["error" : "HTTP error code: \(httpResponse.statusCode)"]
+                resultArray.append(errorObject)
+                return changeJsonObject(useData: ["result": "FAIL", "value": resultArray])
             }
         }
 
@@ -516,9 +515,8 @@ public func getNFTsByWalletArray(network: [String], account: [String], collectio
             throw error
         }
     } catch {
-        resultArray = []
-        jsonData["error"] = error.localizedDescription
-        resultArray.append(jsonData)
+        errorObject = ["error" : error.localizedDescription]
+        resultArray.append(errorObject)
         return ["result": "FAIL", "value": resultArray]
     }
 }
