@@ -979,10 +979,6 @@ public func deployErc721Async(network: String, from: String, name: String, symbo
         var url = try await URL(string:rpcUrl)
         let web3 = try await Web3.new(url!)
         
-//        let rpcUrl = try URL(string: getRPCUrl(network: network))!
-//        let chainID = try getChainID(network: network)
-//        let web3 = try await Web3.new(rpcUrl)
-        
         let nonce = try await web3.eth.getTransactionCount(for: fromEA!, onBlock: .pending)
         let gasLimitEstimate = try await getEstimateGasAsync(network: network, tx_type: "deployERC721", from: from, name: name, symbol: symbol, base_uri: token_base_uri, uri_type: uri_type)
         let gasPriceEstimate = try await getEstimateGasAsync(network: network, tx_type: "baseFee")
@@ -1034,6 +1030,14 @@ public func deployErc721Async(network: String, from: String, name: String, symbo
 
         let response = try await web3.eth.send(raw: transactionData)
         if(response.hash != nil){
+//            let sql =
+//            "INSERT INTO " +
+//                "nft_collection_table (network, collection_id, collection_name, collection_symbol, nft_type, uri_type, owner, base_uri) " +
+//            "VALUES " +
+//                "('\(network)', '\(collection_id)', '\(name)', '\(symbol)', 'erc721', '\(uri_type)', '\(token_base_uri)')"
+//
+//            sqlJsonObject(sqlQuery: sql)
+            
             result["transaction_hash"] = JSON(response.hash)
             resultArray.arrayObject?.append(result)
             resultData = changeJsonObject(useData:["result": "OK", "value": resultArray])

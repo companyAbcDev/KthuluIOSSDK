@@ -358,9 +358,9 @@ public func getNetworkFeeAsync(network: String, to_network: String, fee_type: St
         
         let readOp = try await contract.createReadOperation("getNetworkFeeIdxByName", parameters: [BigUInt(toNetworkHex)])!.callContractMethod()
         
-        let networkFeeIdx = readOp["0"] as? BigUInt
+        let networkFeeIdx = (readOp["0"] as? BigUInt)!
         
-        let readOp2 = try await contract.createReadOperation("getNetworkFeeByIdx", parameters: [networkFeeIdx])!.callContractMethod()
+        let readOp2 = try await contract.createReadOperation("getNetworkFeeByIdx", parameters: [UInt32(networkFeeIdx)])!.callContractMethod()
         
         let feesArray = readOp2["0"] as? [BigUInt]
         

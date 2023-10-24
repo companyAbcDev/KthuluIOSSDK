@@ -340,7 +340,7 @@ public func bridgeCoinAsync(network: String, to_network: String, from : String, 
         guard let value = Utilities.parseToBigUInt(amount, decimals: 18) else {
             throw Web3Error.inputError(desc: "Cannot parse inputted amount")
         }
-        
+
         var to_network = to_network;
         switch to_network {
             case "ethereum":
@@ -355,12 +355,24 @@ public func bridgeCoinAsync(network: String, to_network: String, from : String, 
                 to_network = ""
         }
         
+        var txFeeData = try await getNetworkFeeAsync(network: network, to_network: to_network, fee_type: "token")
+                
+        var txFee: BigUInt?
+        if let valueArray = txFeeData["value"].arrayObject as? [[String: Any]], let txFeeString = valueArray.first?["networkFee"] as? String {
+            txFee = BigUInt(txFeeString)
+        }
+        
+        print("value", value)
+        print("txFee", txFee)
+
+        let totalAmount = value + txFee!
+        
         let networkHex = try await textToHex(to_network)
         
         if(network == "bnb" || network == "tbnb") {
-            transaction = CodableTransaction(to:bridgeContractAddress!, nonce:nonce, chainID:chainID, value:value, gasLimit: gasLimit, gasPrice: gasPrice)
+            transaction = CodableTransaction(to:bridgeContractAddress!, nonce:nonce, chainID:chainID, value:totalAmount, gasLimit: gasLimit, gasPrice: gasPrice)
         } else {
-            transaction = CodableTransaction(type:.eip1559, to:bridgeContractAddress!, nonce:nonce, chainID:chainID, value:value, gasLimit:gasLimit, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
+            transaction = CodableTransaction(type:.eip1559, to:bridgeContractAddress!, nonce:nonce, chainID:chainID, value:totalAmount, gasLimit:gasLimit, maxFeePerGas: gasPrice, maxPriorityFeePerGas: BigUInt(maxPriorityFeePerGas))
         }
         transaction?.from = from
         let contractData = contract.contract.method("moveFromETHER", parameters: [networkHex], extraData: Data())
@@ -1108,3 +1120,4 @@ public func checkTransactionStatusAsync(network: String, txHash: String) async t
         return "Transaction not yet mined"
     }
 }
+
