@@ -1029,16 +1029,19 @@ public func deployErc721Async(network: String, from: String, name: String, symbo
         }
 
         let response = try await web3.eth.send(raw: transactionData)
-        if(response.hash != nil){
-//            let sql =
-//            "INSERT INTO " +
-//                "nft_collection_table (network, collection_id, collection_name, collection_symbol, nft_type, uri_type, owner, base_uri) " +
-//            "VALUES " +
-//                "('\(network)', '\(collection_id)', '\(name)', '\(symbol)', 'erc721', '\(uri_type)', '\(token_base_uri)')"
-//
-//            sqlJsonObject(sqlQuery: sql)
+        let collection_id = try await getCollectionIdAsync(network: network, txHash: response.hash)
+        
+        if(response.hash != ""){
+            let sql =
+            "INSERT INTO " +
+                "nft_collection_table (network, collection_id, collection_name, collection_symbol, nft_type, uri_type, owner, base_uri) " +
+            "VALUES " +
+                "('\(network)', '\(collection_id)', '\(name)', '\(symbol)', 'erc721', '\(uri_type)', '\(from)', '\(token_base_uri)')"
+
+            sqlJsonObject(sqlQuery: sql)
             
             result["transaction_hash"] = JSON(response.hash)
+            result["collection_id"] = JSON(collection_id)
             resultArray.arrayObject?.append(result)
             resultData = changeJsonObject(useData:["result": "OK", "value": resultArray])
         } else {
@@ -1054,6 +1057,8 @@ public func deployErc721Async(network: String, from: String, name: String, symbo
         return resultData
     }
 }
+
+
 
 public func deployErc1155Async(network: String, from: String, name: String, symbol: String, token_base_uri: String, uri_type: String) async throws -> JSON {
         var resultArray: JSON = JSON([])
@@ -1128,10 +1133,21 @@ public func deployErc1155Async(network: String, from: String, name: String, symb
         guard let transactionData = transaction!.encode(for: .transaction) else {
             throw Web3Error.dataError
         }
-
+        
         let response = try await web3.eth.send(raw: transactionData)
-        if(response.hash != nil){
+        let collection_id = try await getCollectionIdAsync(network: network, txHash: response.hash)
+        
+        if(response.hash != ""){
+            let sql =
+            "INSERT INTO " +
+                "nft_collection_table (network, collection_id, collection_name, collection_symbol, nft_type, uri_type, owner, base_uri) " +
+            "VALUES " +
+                "('\(network)', '\(collection_id)', '\(name)', '\(symbol)', 'erc1155', '\(uri_type)', '\(from)', '\(token_base_uri)')"
+
+            sqlJsonObject(sqlQuery: sql)
+            
             result["transaction_hash"] = JSON(response.hash)
+            result["collection_id"] = JSON(collection_id)
             resultArray.arrayObject?.append(result)
             resultData = changeJsonObject(useData:["result": "OK", "value": resultArray])
         } else {
@@ -2595,7 +2611,27 @@ public func chkNFTHolder(network: String, account: String, collection_id: String
         result["error"] = JSON(error.localizedDescription)
         return result
     }
-    
-    
 }
 
+public func getCollectionIdAsync(network: String, txHash: String) async throws -> String {
+    for _ in 0..<20 {
+        do {
+            networkSettings(network: network)
+            let url = try await URL(string: rpcUrl)
+            let web3 = try await Web3.new(url!)
+            let txReceipt = try await web3.eth.transactionReceipt(Data.fromHex(txHash)!)
+            print("txReceipt", txReceipt)
+            if !txReceipt.logs.isEmpty {
+                return txReceipt.logs[0].address.address
+            }
+        } catch let error {
+            print("Error", error.localizedDescription)
+            // 오류 발생 시 계속 재시도
+            await Task.sleep(3) // 2초 대기
+        }
+        // 일정 시간 동안 대기한 후 재시도
+        await Task.sleep(3) // 2초 대기
+    }
+    
+    return "0x"
+}

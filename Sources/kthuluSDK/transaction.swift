@@ -1120,4 +1120,3 @@ public func checkTransactionStatusAsync(network: String, txHash: String) async t
         return "Transaction not yet mined"
     }
 }
-
