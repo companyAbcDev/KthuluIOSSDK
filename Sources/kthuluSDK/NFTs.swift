@@ -2627,10 +2627,10 @@ public func getCollectionIdAsync(network: String, txHash: String) async throws -
         } catch let error {
             print("Error", error.localizedDescription)
             // 오류 발생 시 계속 재시도
-            await Task.sleep(3) // 2초 대기
+            try await Task.sleep(nanoseconds: 2 * 1_000_000_000) // 2초 대기
         }
         // 일정 시간 동안 대기한 후 재시도
-        await Task.sleep(3) // 2초 대기
+        try await Task.sleep(nanoseconds: 2 * 1_000_000_000) // 2초 대기
     }
     
     return "0x"
