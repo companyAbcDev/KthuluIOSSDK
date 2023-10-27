@@ -398,13 +398,15 @@ public func bridgeCoinAsync(network: String, to_network: String, from : String, 
         }
         
         let response = try await web3.eth.send(raw: transactionData)
-        result["result"] = JSON("OK")
-        result["transactionHash"] = JSON(response.hash)
-        return result
+        result["transaction_hash"] = JSON(response.hash)
+        resultArray.arrayObject?.append(result)
+        resultData = changeJsonObject(useData:["result": "OK", "value": resultArray])
+        return resultData
     } catch let error{
-        result["result"] = JSON("FAIL")
-        result["transactionHash"] = JSON(error.localizedDescription)
-        return result
+        result["error"] = JSON(error.localizedDescription)
+        resultArray.arrayObject?.append(result)
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
+        return resultData
     }
 }
 
@@ -530,13 +532,17 @@ public func bridgeTokenAsync(network: String, to_network: String, from : String,
         }
         
         let response = try await web3.eth.send(raw: transactionData)
-        result["result"] = JSON("OK")
-        result["transactionHash"] = JSON(response.hash)
-        return result
+        
+        result["transaction_hash"] = JSON(response.hash)
+        resultArray.arrayObject?.append(result)
+        resultData = changeJsonObject(useData:["result": "OK", "value": resultArray])
+        return resultData
+        
     } catch let error{
-        result["result"] = JSON("FAIL")
-        result["transactionHash"] = JSON(error.localizedDescription)
-        return result
+        result["error"] = JSON(error.localizedDescription)
+        resultArray.arrayObject?.append(result)
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
+        return resultData
     }
 }
 
