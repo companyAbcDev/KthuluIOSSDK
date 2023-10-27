@@ -546,6 +546,100 @@ public func bridgeTokenAsync(network: String, to_network: String, from : String,
     }
 }
 
+public func getExpectedAmountOutAsync(
+    network: String,
+    fromTokenId: String? = nil,
+    toTokenId: String? = nil,
+    amount: String
+) async -> JSON {
+    networkSettings(network: network)
+    var jsonData = JSON()
+    var resultArray: JSON = JSON([])
+    var resultData: JSON = JSON(["result": "FAIL", "value": resultArray])
+    
+    let defaultTokenIds = [
+        "ethereum": "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2",
+        "cypress": "0",
+        "polygon": "0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270",
+        "bnb": "0xbb4CdB9CBd36B01bD1cBaEBF2De08d9173bc095c"
+    ]
+    
+    let actualFromTokenId = fromTokenId ?? defaultTokenIds[network]
+    let actualToTokenId = toTokenId ?? defaultTokenIds[network]
+    
+    if network == "cypress" {
+        return JSON(["result": "FAIL", "value": [JSON(["error": "cypress is not supported"])]])
+    }
+    
+    do {
+        let url = try await URL(string: rpcUrl)
+        let web3 = try await Web3.new(url!)
+        // Getting pair using the getPair function of the contract
+        let contract = web3.contract(abiSwapFactory, at: EthereumAddress(uniswapV2FactoryAddress), abiVersion: 2)!
+        guard let readOperation = contract.createReadOperation("getPair", parameters: [actualFromTokenId, actualToTokenId]) else {
+            throw Web3Error.dataError // 혹은 적절한 에러 메시지와 함께 다른 에러 유형을 던질 수 있습니다.
+        }
+        let getPairResponse = try await readOperation.callContractMethod()
+        
+        guard let ethereumAddress = getPairResponse["0"] as? EthereumAddress else {
+            throw Web3Error.dataError
+        }
+
+        let addressString = ethereumAddress.address
+        let getPair = BigUInt(addressString.dropFirst(2), radix: 16)!
+        if getPair == BigUInt.zero {
+            throw Web3Error.dataError
+        } else {
+            
+            // Decimals of the fromToken
+            var contract = web3.contract(Web3.Utils.erc20ABI, at: EthereumAddress(actualFromTokenId!)!, abiVersion: 2)!
+            var callResult = try await contract.createReadOperation("decimals")!.callContractMethod()
+            guard let fromDecimalsBigUInt = callResult["0"] as? BigUInt else {
+                throw Web3Error.dataError
+            }
+            let fromDecimals = Int(fromDecimalsBigUInt)
+
+            let decimalMultiplier = BigUInt(10).power(fromDecimals)
+            guard let amountInWei = Utilities.parseToBigUInt(amount, decimals: fromDecimals) else {
+                throw Web3Error.inputError(desc: "Cannot parse inputted amount")
+            }
+
+            // Get amounts out
+            contract = web3.contract(abiSwapRouter, at: EthereumAddress(uniswapV2RouterAddress)!, abiVersion: 2)!
+            let parameters: [Any] = [amountInWei, [EthereumAddress(actualFromTokenId!)!, EthereumAddress(actualToTokenId!)!]]
+            let amountsOutResponse = try await contract.createReadOperation("getAmountsOut", parameters: parameters)!.callContractMethod()
+
+            guard let amountsOut = amountsOutResponse["0"] as? [BigUInt] else {
+                throw Web3Error.dataError
+            }
+
+            // Decimals of the toToken
+            contract = web3.contract(Web3.Utils.erc20ABI, at: EthereumAddress(actualToTokenId!)!, abiVersion: 2)!
+            callResult = try await contract.createReadOperation("decimals")!.callContractMethod()
+            guard let toDecimalsBigUInt = callResult["0"] as? BigUInt else {
+                throw Web3Error.dataError
+            }
+            let toDecimals = Int(toDecimalsBigUInt)
+            
+            if let lastAmountOut = amountsOut.last {
+                let newBalance = Double(lastAmountOut) / pow(10.0, Double(toDecimals))
+                print("newBalance", newBalance)
+                jsonData["balnace"] = JSON(newBalance)
+                resultArray.arrayObject?.append(jsonData)
+                resultData = changeJsonObject(useData:["result": "OK", "value": resultArray])
+            }
+
+        }
+    } catch let error {
+        resultArray = JSON([])
+        jsonData["error"] = JSON(error.localizedDescription)
+        resultArray.arrayObject?.append(jsonData)
+        resultData = changeJsonObject(useData: ["result": "FAIL", "value": resultArray])
+    }
+    
+    return resultData
+}
+
 public func tokenSwapAppoveAsync(
     network: String,
     from: String,
