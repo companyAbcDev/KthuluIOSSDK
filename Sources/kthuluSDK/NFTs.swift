@@ -1041,7 +1041,7 @@ public func deployErc721Async(network: String, from: String, name: String, symbo
             sqlJsonObject(sqlQuery: sql)
             
             result["transaction_hash"] = JSON(response.hash)
-            result["collection_id"] = JSON(collection_id)
+            result["contract_address"] = JSON(collection_id)
             resultArray.arrayObject?.append(result)
             resultData = changeJsonObject(useData:["result": "OK", "value": resultArray])
         } else {
@@ -1147,7 +1147,7 @@ public func deployErc1155Async(network: String, from: String, name: String, symb
             sqlJsonObject(sqlQuery: sql)
             
             result["transaction_hash"] = JSON(response.hash)
-            result["collection_id"] = JSON(collection_id)
+            result["contract_address"] = JSON(collection_id)
             resultArray.arrayObject?.append(result)
             resultData = changeJsonObject(useData:["result": "OK", "value": resultArray])
         } else {
