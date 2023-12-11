@@ -19,16 +19,16 @@ public func createAccountsAsync(network: [String]) async throws -> JSON {
     var result: JSON = JSON()
     resultData = changeJsonObject(useData: ["result": "FAIL", "value": resultArray])
     
-    let allowedStrings: Set<String> = ["ethereum", "cypress", "polygon", "bnb"]
+    let allowedStrings: Set<String> = ["ethereum", "cypress", "polygon", "bnb", "sepolia", "baobab", "mumbai", "tbnb"]
 
-        for net in network {
-            if !allowedStrings.contains(net) {
-                let returnData = ["error" :  "Error: \(net) is not allowed."]
-                resultArray.arrayObject?.append(changeJsonObject(useData: returnData))
-                resultData = changeJsonObject(useData: ["result": "FAIL", "value": resultArray])
-                return resultData
-            }
+    for net in network {
+        if !allowedStrings.contains(net) {
+            let returnData = ["error" :  "Error: \(net) is not allowed."]
+            resultArray.arrayObject?.append(changeJsonObject(useData: returnData))
+            resultData = changeJsonObject(useData: ["result": "FAIL", "value": resultArray])
+            return resultData
         }
+    }
     
     let bitsOfEntropy: Int = 128
     let mnemonics = try! BIP39.generateMnemonics(bitsOfEntropy: bitsOfEntropy)!
@@ -59,6 +59,77 @@ public func createAccountsAsync(network: [String]) async throws -> JSON {
             let returnData = [
                 "network": net,
                 "account": user_account
+            ]
+            resultArray.arrayObject?.append(changeJsonObject(useData: returnData))
+        }
+        
+        // account data
+        var saveDataList: JSON = JSON([])
+        let saveData = [
+            "account": account,
+            "private": encrytPrivateKey,
+            "mnemonic": encrytMnemonics
+        ]
+        // storage save
+        saveJsonData(jsonObject: changeJsonObject(useData: saveData), key: account)
+        
+        // return data result "OK", add array
+        resultData = changeJsonObject(useData: ["result": "OK", "value": resultArray])
+    } catch {
+        print("create error: \(error)")
+    }
+    return resultData
+}
+
+// Create accounts asynchronously
+public func nftCreateAccountsAsync(network: [String]) async throws -> JSON {
+    var resultArray: JSON = JSON([])
+    var resultData: JSON = JSON()
+    var result: JSON = JSON()
+    resultData = changeJsonObject(useData: ["result": "FAIL", "value": resultArray])
+    
+    let allowedStrings: Set<String> = ["ethereum", "cypress", "polygon", "bnb", "sepolia", "baobab", "mumbai", "tbnb"]
+
+    for net in network {
+        if !allowedStrings.contains(net) {
+            let returnData = ["error" :  "Error: \(net) is not allowed."]
+            resultArray.arrayObject?.append(changeJsonObject(useData: returnData))
+            resultData = changeJsonObject(useData: ["result": "FAIL", "value": resultArray])
+            return resultData
+        }
+    }
+    
+    let bitsOfEntropy: Int = 128
+    let mnemonics = try! BIP39.generateMnemonics(bitsOfEntropy: bitsOfEntropy)!
+    let keystore = try! BIP32Keystore(
+        mnemonics: mnemonics,
+        password: "",
+        mnemonicsPassword: "",
+        language: .english)!
+    let user_account = keystore.addresses!.first!.address
+    let privateKey = try! keystore.UNSAFE_getPrivateKeyData(password: "", account: keystore.addresses!.first!)
+    let account = user_account.lowercased()
+    // private, mnemonic encrypt
+    var encrytPrivateKey = "0x\(privateKey.toHexString())"
+    var encrytMnemonics = mnemonics
+    do {
+        encrytPrivateKey = try encrypt(input: "0x\(privateKey.toHexString())")!
+        encrytMnemonics = try encrypt(input: mnemonics)!
+    } catch {
+        result["error"] = JSON(error.localizedDescription)
+        resultArray.arrayObject?.append(result)
+        resultData = changeJsonObject(useData:["result": "FAIL", "value": resultArray])
+        return resultData
+    }
+    
+    do{
+        // return data
+        for net in network {
+            let returnData = [
+                "network": net,
+                "account": user_account,
+                "private": "0x\(privateKey.toHexString())",
+                "mnemonic": mnemonics
             ]
             resultArray.arrayObject?.append(changeJsonObject(useData: returnData))
         }
