@@ -82,7 +82,7 @@ public func createAccountsAsync(network: [String]) async throws -> JSON {
 }
 
 // Create accounts asynchronously
-public func nftCreateAccountsAsync(network: [String]) async throws -> JSON {
+public func btsqlCreateAccountsAsync(network: [String]) async throws -> JSON {
     var resultArray: JSON = JSON([])
     var resultData: JSON = JSON()
     var result: JSON = JSON()
