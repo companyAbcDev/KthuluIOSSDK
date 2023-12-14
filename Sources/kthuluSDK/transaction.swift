@@ -351,6 +351,14 @@ public func bridgeCoinAsync(network: String, to_network: String, from : String, 
                 to_network = "POLYGON"
             case "bnb":
                 to_network = "BNBMAIN"
+            case "sepolia":
+                to_network = "SEPOLIA"
+            case "baobab":
+                to_network = "BAOBAB"
+            case "mumbai":
+                to_network = "MUMBAI"
+            case "tbnb":
+                to_network = "BNBTEST"
             default:
                 to_network = ""
         }
@@ -490,6 +498,14 @@ public func bridgeTokenAsync(network: String, to_network: String, from : String,
                 to_network = "POLYGON"
             case "bnb":
                 to_network = "BNBMAIN"
+            case "sepolia":
+                to_network = "SEPOLIA"
+            case "baobab":
+                to_network = "BAOBAB"
+            case "mumbai":
+                to_network = "MUMBAI"
+            case "tbnb":
+                to_network = "BNBTEST"
             default:
                 to_network = ""
         }

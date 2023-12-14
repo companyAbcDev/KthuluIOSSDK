@@ -2013,6 +2013,14 @@ public func bridgeErc721Async( network: String,
                 to_network = "POLYGON"
             case "bnb":
                 to_network = "BNBMAIN"
+            case "sepolia":
+                to_network = "SEPOLIA"
+            case "baobab":
+                to_network = "BAOBAB"
+            case "mumbai":
+                to_network = "MUMBAI"
+            case "tbnb":
+                to_network = "BNBTEST"
             default:
                 to_network = ""
         }
@@ -2142,6 +2150,14 @@ public func bridgeErc1155Async( network: String,
                 to_network = "POLYGON"
             case "bnb":
                 to_network = "BNBMAIN"
+            case "sepolia":
+                to_network = "SEPOLIA"
+            case "baobab":
+                to_network = "BAOBAB"
+            case "mumbai":
+                to_network = "MUMBAI"
+            case "tbnb":
+                to_network = "BNBTEST"
             default:
                 to_network = ""
         }

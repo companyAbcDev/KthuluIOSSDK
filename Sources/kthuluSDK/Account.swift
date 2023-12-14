@@ -160,7 +160,7 @@ public func restoreAccountAsync(network: [String]? = nil, privateKey: String? = 
     
     var networkArray: Array<String> = []
     if(network == nil){
-        networkArray = ["ethereum", "cypress", "polygon", "bnb"]
+        networkArray = ["ethereum", "cypress", "polygon", "bnb", "sepolia", "baobab", "mumbai", "tbnb"]
     } else {
         networkArray = network!
     }
@@ -228,6 +228,106 @@ public func restoreAccountAsync(network: [String]? = nil, privateKey: String? = 
                 let result = [
                     "network": net,
                     "account": user_account.address
+                ]
+                resultArray.arrayObject?.append(changeJsonObject(useData: result))
+            }
+            
+            var saveDataList: JSON = JSON([])
+            let saveData = [
+                "account": account,
+                "private": encrytPrivateKey,
+                "mnemonic": encrytMnemonics
+            ]
+            
+            saveJsonData(jsonObject: changeJsonObject(useData: saveData), key: account)
+            resultData = changeJsonObject(useData: ["result": "OK", "value": resultArray])
+        }
+    } else {
+        print("Either privateKey or mnemonic must be provided.")
+    }
+    return resultData
+}
+
+// btsqlGetAccountAsync asynchronously
+public func btsqlRestoreAccountAsync(network: [String]? = nil, privateKey: String? = nil, mnemonic: String? = nil)  async throws -> JSON {
+    var resultArray: JSON = JSON([])
+    var resultData: JSON = JSON()
+    resultData = changeJsonObject(useData: ["result": "FAIL", "value": resultArray])
+    
+    var networkArray: Array<String> = []
+    if(network == nil){
+        networkArray = ["ethereum", "cypress", "polygon", "bnb", "sepolia", "baobab", "mumbai", "tbnb"]
+    } else {
+        networkArray = network!
+    }
+    
+    if let privateKey = privateKey {
+        // Generate address from private key
+        do {
+            let privateKeyData = Data(hex: privateKey)
+            let publicKey = Utilities.privateToPublic(privateKeyData)
+            let user_account = Utilities.publicToAddressString(publicKey!)
+            var encrytPrivateKey = ""
+            do {
+                encrytPrivateKey = try encrypt(input:privateKey)!
+            } catch {
+                print("Encrypt error: \(error)")
+            }
+            let account = user_account!.lowercased()
+            
+            for net in networkArray{
+                let result = [
+                    "network": net,
+                    "account": user_account,
+                    "private": privateKey,
+                    "mnemonic": ""
+                ]
+                resultArray.arrayObject?.append(changeJsonObject(useData: result))
+            }
+            var saveDataList: JSON = JSON([])
+            let saveData = [
+                "account": account,
+                "private": encrytPrivateKey,
+                "mnemonic": ""
+            ]
+            
+            // storage save
+            saveJsonData(jsonObject: changeJsonObject(useData: saveData), key: account)
+            resultData = changeJsonObject(useData: ["result": "OK", "value": resultArray])
+        }
+    } else if let mnemonic = mnemonic {
+        // Generate address from mnemonic
+        do {
+            guard let keystore = try? BIP32Keystore(
+                mnemonics: mnemonic,
+                password: "",
+                mnemonicsPassword: "",
+                language: .english),
+                  let user_account = keystore.addresses?.first,
+                  let privateKeyData = try? keystore.UNSAFE_getPrivateKeyData(password: "", account: user_account)
+            else {
+                let nilObject: JSON = JSON()
+                return nilObject
+            }
+            let account = user_account.address.lowercased()
+            let privateKey = try! keystore.UNSAFE_getPrivateKeyData(password: "", account: keystore.addresses!.first!)
+            var encrytPrivateKey = "0x\(privateKey.toHexString())"
+            var encrytMnemonics = mnemonic
+            
+            do {
+                encrytPrivateKey = try encrypt(input: "0x\(privateKey.toHexString())")!
+                encrytMnemonics = try encrypt(input: mnemonic)!
+                
+            } catch {
+                print("Encrypt error: \(error)")
+            }
+            
+            for net in networkArray{
+                let result = [
+                    "network": net,
+                    "account": user_account.address,
+                    "private": "0x\(privateKey.toHexString())",
+                    "mnemonic": mnemonic
                 ]
                 resultArray.arrayObject?.append(changeJsonObject(useData: result))
             }
